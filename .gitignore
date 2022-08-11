@@ -4,3 +4,4 @@ Images*
 *.jpg
 *.png
 *.xmodel
+.kube/*
