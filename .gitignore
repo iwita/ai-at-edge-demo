@@ -1,2 +1,6 @@
 *.zip
 Images*
+*.jpeg
+*.jpg
+*.png
+*.xmodel
