@@ -1,0 +1,22 @@
+name: lstm-netw-intr
+namespace: demo
+kind: AIF
+spec:
+  supportsAcceleration: True
+networkType: LSTM
+objectives:
+    latency: -1
+    energy: 5
+availableVersions:
+  - name: lstm-netw-intr-u280-lat
+    device: xilinx.com/fpga-xilinx_u280_xdma_201920_3-1579649056
+    optimization: 
+      latency: 50ms
+    # This could point to a git repo
+    configFile: ../sc1/lstm-lat.yaml
+      # deployment: config/lstm-lat.yaml
+      # service: config/lstm-svc.yaml
+    advertisedResults:
+    - latency
+    - throughput
+    - classification

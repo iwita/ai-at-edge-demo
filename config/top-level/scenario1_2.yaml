@@ -1,0 +1,19 @@
+name: lstm-netw-intr
+namespace: demo
+kind: AIF
+spec:
+  supportsAcceleration: True
+networkType: LSTM
+objectives:
+  throughput: -1
+  energy: 5
+availableVersions:
+  - name: lstm-netw-intr-u280-thr
+    device: xilinx.com/fpga-xilinx_u280_xdma_201920_3-1579649056
+    optimization:
+      throughput: 10
+    configFile: ../sc1/lstm-throughput.yaml
+    advertisedResults:
+    - latency
+    - throughput
+    - classification

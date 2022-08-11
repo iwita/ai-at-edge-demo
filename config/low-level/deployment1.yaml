@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netw-intr-u280
+spec:
+  selector:
+    matchLabels:
+      app: netw-intr-u280
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: netw-intr-u280
+    spec:
+      containers:
+      - name: netw-intr-u280
+        image: iwita/lstm-netintr:u280
+        imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /lstm_app/data
+          name: data
+        resources:
+          limits:
+            xilinx.com/fpga-xilinx_u280_xdma_201920_3-1579649056: 1
+        ports:
+        - containerPort: 5000
+      volumes:
+      - name: data
+        hostPath:
+          path: /home/iccs/netw-intr/data
+

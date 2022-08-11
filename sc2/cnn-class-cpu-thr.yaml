@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cnn-class-service
+  namespace: demo
+spec:
+  type: NodePort
+  ports:
+  - port: 3000
+    protocol: TCP
+    targetPort: 3000
+    nodePort: 31334
+  selector:
+    app: cnn-class
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cnn-classification-dummy-thr
+  namespace: demo
+spec:
+  selector:
+    matchLabels:
+      app: cnn-class
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: cnn-class
+    spec:
+      # hostNetwork: true
+      containers:
+      - name: cnn-classification-dummy-thr
+        image: ubuntu
+        command: ["/bin/bash", "-c", "--"]
+        args: ["while true; do sleep 1000s; done;"]
+        imagePullPolicy: Always
+        # resources:
+          # limits:
+            # xilinx.com/fpga-xilinx_u280_xdma_201920_3-1579649056: 1

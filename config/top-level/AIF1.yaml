@@ -1,0 +1,19 @@
+name: network-intrusion
+kind: AIF
+spec:
+  supportsAcceleration: True
+networkType: LSTM
+objectives:
+  latency: 3ms
+availableVersions:
+  - name: fpga-u280-latency
+    objective: latency
+    device: alveo-u280
+    advertisedResults:
+      latency: 2ms
+    # YAML File could be local or on github repo?!
+  - name: fgpa-u280-throughput
+    objective: throughput
+    device: alveo-u280
+    advertisedResults:
+      throughput: xx

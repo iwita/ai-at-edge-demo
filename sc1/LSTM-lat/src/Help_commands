@@ -1,0 +1,27 @@
+/opt/xilinx/xrt/bin/xbmgmt scan
+0000:af:00.0 xilinx_u280_xdma_201920_3(ID=0x5e278820) mgmt(inst=44800)
+/opt/xilinx/xrt/bin/xbutil scan
+[0] 0000:af:00.1 xilinx_u280_xdma_201920_3(ID=0x5e278820) user(inst=130)
+
+-For image ID
+docker images -a
+-For container ID
+docker ps
+
+-Copy from local to container
+docker cp "./data" 7e3a0e3273b6(container ID):"./"
+
+-Remove image
+docker rmi 79703fe36674(image ID)
+-Remove container
+docker rm ff0c5c6b7fa0(container ID)
+
+-Run image
+docker run --rm -it --device=/dev/xclmgmt44800:/dev/xclmgmt44800(mgmt) --device=/dev/dri/renderD130:/dev/dri/renderD130(user) lstm(repository name)
+docker run --rm -it --device=/dev/xclmgmt44800:/dev/xclmgmt44800 --device=/dev/dri/renderD130:/dev/dri/renderD130 lstm
+
+-Build image
+docker build -t lstm .
+
+-Run python Host (50: timesteps to change that you have to change also the input data, 1: how many to process from the input file (not in batch, one after the other))
+python3 Host.py krnl_lstm.xclbin 50 1

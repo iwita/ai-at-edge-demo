@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lstm-service
+  namespace: demo
+  labels:
+    app: netw-intr
+spec:
+  type: NodePort
+  ports:
+  - port: 5000
+    protocol: TCP
+    targetPort: 5000
+    nodePort: 31333
+  selector:
+    app: netw-intr
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lstm-netw-intr-u280-thr
+  namespace: demo
+  labels:
+    app: netw-intr
+spec:
+  selector:
+    matchLabels:
+      app: netw-intr
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: netw-intr
+    spec:
+      containers:
+      - name: netw-intr-u280-thr
+        image: iwita/lstm-netw-intr:alveo-u280-thr
+        imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /lstm_app/data
+          name: data
+        resources:
+          limits:
+            xilinx.com/fpga-xilinx_u280_xdma_201920_3-1579649056: 1
+        ports:
+        - containerPort: 5000
+      volumes:
+      - name: data
+        hostPath:
+          path: /home/iccs/netw-intr/data

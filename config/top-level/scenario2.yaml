@@ -1,0 +1,27 @@
+name: cnn-classification
+namespace: demo
+kind: AIF
+spec:
+  supportsAcceleration: True
+networkType: CNN
+objectives:
+  throughput: -1
+availableVersions:
+  - name: cnn-classification-dummy-thr
+    optimization: 
+      throughput: 1000
+    device: cpu
+    advertisedResults:
+      - throughput
+      - classification
+    configFile: ../../sc2/cnn-class-cpu-thr.yaml
+    # YAML File could be local or on github repo?!
+  - name: cnn-classification-u280-thr
+    optimization: 
+      throughput: 2000
+    device: xilinx.com/fpga-xilinx_u280_xdma_201920_3-1579649056
+    advertisedResults:
+      - throughput
+      - classification
+    configFile: ../../sc2/cnn-class-near-thr.yaml
+      

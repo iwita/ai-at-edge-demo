@@ -1,0 +1,33 @@
+name: segmentation
+kind: AIF
+spec:
+  supportsAcceleration: True
+networkType: CNN
+objectives:
+  latency: xx
+availableVersions:
+  - name: cpu
+    objective: latency
+    device:
+      cpu:
+        model: intel-xeon
+        cores: 8
+    advertisedResults:
+    - latency
+    # YAML File could be local or on github repo?!
+  - name: fgpa-u280-latency
+    objective: latency
+    device: alveo-u280
+    advertisedResults:
+    - latency
+  - name: nvidia-tesla-v100-latency
+    objective: latency
+    device: tesla-v100
+    advertisedResults:
+    - latency
+  - name: fgpa-mpsoc
+    objective: latency
+    device: mpsoc-104
+    advertisedResults:
+    - latency
+
