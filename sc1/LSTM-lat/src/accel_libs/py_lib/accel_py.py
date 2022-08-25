@@ -6,6 +6,7 @@
 #---------------------------------#
 
 import os
+# from sympy import true
 import sys
 import numpy
 import ctypes
@@ -184,11 +185,15 @@ def print_res(res_ptr, res, timesteps):
     PARAM = parameters()
     #res = results(res_ptr, timesteps)
     if(res[(int(timesteps)-1)]>0.5):
-        ret ="Attack detected : " + str(res[(int(timesteps)-1)])
+        # ret ="Attack detected : " + str(res[(int(timesteps)-1)])
+        ret=True
+        print("Anomaly=yes : (%.2f)" % (res[(int(timesteps)-1)]))
         # print("Attack detected : ",res[(int(timesteps)-1)])
     else:
-        ret ="Normal process : " + str(res[(int(timesteps)-1)])
-    print(ret)
+        # ret ="Normal process : " + str(res[(int(timesteps)-1)])
+        ret=False
+        print("Anomaly=no : (%.2f)" % (res[(int(timesteps)-1)]))
+    # print(ret)
     return ret
 
 

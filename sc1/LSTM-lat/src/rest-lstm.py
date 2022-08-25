@@ -60,7 +60,7 @@ def init(xclbin_name,timesteps):
         global elapsed_time_i
         elapsed_time_i = et - st
         # print('Initialize time:', elapsed_time_i.total_seconds()*1000, 'ms')
-        app.logger.info('Initialize time:' + str(elapsed_time_i.total_seconds()*1000) + 'ms')
+        app.logger.info('Initialize time:\t' + str(elapsed_time_i.total_seconds()*1000) + 'ms')
     except OSError as o:
         print(o)
         print("FAILED TEST")
@@ -100,92 +100,100 @@ def test():
 
 	# check if the post request has the file part
     # filename='input.dat'
-    if 'file' not in request.files:
-        resp = jsonify({'message' : 'No file part in the request'})
+    data = request.json
+    # if 'file' not in request.files:
+    if 'array' not in data:
+        resp = jsonify({'message' : 'No array included in the request'})
         resp.status_code = 400
         return resp
-    file=request.files['file']
-    if file.filename == '':
-        resp = jsonify({'message' : 'No file part in the request'})
-        resp.status_code = 400
-        return resp
-    if not allowed_file(file.filename):
-        resp=jsonify({'message':"Allowed File Types .dat"})    
-        resp.status_code = 400
-        return resp
-    elif file:    
-        try:
-            print(file.filename)
+    V = numpy.array(data['array'])
 
-            # Convert from FileStorage (Flask related object) to FileObject to read
-            file = BufferedReader(file)
-            # valuein=read_file(file.filename,int(timesteps)*int(runs_no))  #Input data from a file, or use your own variable
-            valuein=read_file2(file,int(timesteps)*int(runs_no)) 
-            for i in range(int(runs_no)):
-                #print("---- Run: ", i," ----")
-                #print("Convert input to short")
-                st = datetime.datetime.now()
-                data_ptr = in_ptr(valuein[(i*int(timesteps)):(((i+1)*int(timesteps)))], timesteps)
-                et = datetime.datetime.now()
-                elapsed_time_d = et - st
-                #print("Run accelerator")
-                st = datetime.datetime.now()
-                if(i==0):
-                    lstm(data_ptr, res_ptr, wb_ptrs, timesteps, 1)
-                else:
-                    lstm(data_ptr, res_ptr, wb_ptrs, timesteps, 0)
-                et = datetime.datetime.now()
-                elapsed_time_e = et - st
-                #print("Convert Results")
-                st = datetime.datetime.now()
-                res = results(res_ptr, timesteps)
-                et = datetime.datetime.now()
-                elapsed_time_d2 = et - st
-                #print("Print Results")
-                ret = print_res(res_ptr, res, timesteps)
-                write_file("./data/output.dat",res,len(res))
-                avg_elapsed_time_d=avg_elapsed_time_d+elapsed_time_d.total_seconds()*1000+elapsed_time_d2.total_seconds()*1000
-                avg_elapsed_time_e=avg_elapsed_time_e+elapsed_time_e.total_seconds()*1000
-                avg_total_time=avg_total_time+elapsed_time_e.total_seconds()*1000+elapsed_time_d.total_seconds()*1000+elapsed_time_d2.total_seconds()*1000
+    try:
+        # print(file.filename)
+
+        # Convert from FileStorage (Flask related object) to FileObject to read
+        # file = BufferedReader(file)
+        # valuein=read_file(file.filename,int(timesteps)*int(runs_no))  #Input data from a file, or use your own variable
+        # valuein=read_file2(file,int(timesteps)*int(runs_no)) 
+        valuein=V
+        for i in range(int(runs_no)):
+            #print("---- Run: ", i," ----")
+            #print("Convert input to short")
+            st = datetime.datetime.now()
+            data_ptr = in_ptr(valuein[(i*int(timesteps)):(((i+1)*int(timesteps)))], timesteps)
+            et = datetime.datetime.now()
+            elapsed_time_d = et - st
+            #print("Run accelerator")
+            st = datetime.datetime.now()
+            if(i==0):
+                lstm(data_ptr, res_ptr, wb_ptrs, timesteps, 1)
+            else:
+                lstm(data_ptr, res_ptr, wb_ptrs, timesteps, 0)
+            et = datetime.datetime.now()
+            elapsed_time_e = et - st
+            #print("Convert Results")
+            st = datetime.datetime.now()
+            res = results(res_ptr, timesteps)
+            et = datetime.datetime.now()
+            elapsed_time_d2 = et - st
+            #print("Print Results")
+            ret = print_res(res_ptr, res, timesteps)
+            # write_file("./data/output.dat",res,len(res))
+            avg_elapsed_time_d=avg_elapsed_time_d+elapsed_time_d.total_seconds()*1000+elapsed_time_d2.total_seconds()*1000
+            avg_elapsed_time_e=avg_elapsed_time_e+elapsed_time_e.total_seconds()*1000
+            avg_total_time=avg_total_time+elapsed_time_e.total_seconds()*1000+elapsed_time_d.total_seconds()*1000+elapsed_time_d2.total_seconds()*1000
 
     
-            # print('Data preparation time:', avg_elapsed_time_d/int(runs_no), 'ms')
-            app.logger.info(ret)
-            app.logger.info('Data preparation time: %.2fms', avg_elapsed_time_d/int(runs_no))
-            # app.logger.info('Data preparation time:', avg_elapsed_time_d/int(runs_no), 'ms')
-            # print('Execution time:', avg_elapsed_time_e/int(runs_no), 'ms')
-            app.logger.info('Execution time: %.2fms', avg_elapsed_time_e/int(runs_no))
-            app.logger.info('Total E2E Latency: %.2fms', avg_total_time/int(runs_no))
-            app.logger.info('Total throughput: %.2frps', 1000/avg_total_time)
-            # app.logger.info('Execution time:', avg_elapsed_time_e/int(runs_no), 'ms')
+        # print('Data preparation time:', avg_elapsed_time_d/int(runs_no), 'ms')
+        if res[int(timesteps)-1] > 0.5:
+            app.logger.info("Anomaly:\t\t\t\t\t\t\tyes (%.2f)", res[int(timesteps)-1])
+            ret={"Anomaly": "yes", "percentage": res[int(timesteps)-1]}
+        else:
+            app.logger.info("Anomaly:\t\t\t\t\t\t\tno (%.2f)", res[int(timesteps)-1])
+            ret={"Anomaly": "no", "percentage": res[int(timesteps)-1]}
+        # app.logger.info('Data preparation time:\t %.2fms', avg_elapsed_time_d/int(runs_no))
+        # app.logger.info('Execution time:\t %.2fms', avg_elapsed_time_e/int(runs_no))
+        app.logger.info('Processing Latency: (data preparation + execution):\t%.2fms (%.2f + %.2f)', avg_total_time/int(runs_no), avg_elapsed_time_d/int(runs_no), avg_elapsed_time_e/int(runs_no))
+        app.logger.info('Total throughput (batch in outputs per second):\t\t%.2frps', 1000/avg_total_time)
+        # app.logger.info('Execution time:', avg_elapsed_time_e/int(runs_no), 'ms')
 
-        except OSError as o:
-            print(o)
-            print("FAILED TEST")
-            resp = jsonify({'message' : 'Error:'+str(o.errno)})
-            resp.status_code = 400
-            return resp
-        except AssertionError as a:
-            print(a)
-            print("FAILED TEST")
-            resp = jsonify({'message' : 'Error:'+str(-1)})
-            resp.status_code = 400
-            return resp
-            # return -1
-        except Exception as e:
-            print(e)
-            print("FAILED TEST")
-            resp = jsonify({'message' : 'Error:'+str(-1)})
-            resp.status_code = 400
-            return resp
-            # return -1
+    except OSError as o:
+        print(o)
+        print("FAILED TEST")
+        resp = jsonify({'message' : 'Error:'+str(o.errno)})
+        resp.status_code = 400
+        return resp
+    except AssertionError as a:
+        print(a)
+        print("FAILED TEST")
+        resp = jsonify({'message' : 'Error:'+str(-1)})
+        resp.status_code = 400
+        return resp
+        # return -1
+    except Exception as e:
+        print(e)
+        print("FAILED TEST")
+        resp = jsonify({'message' : 'Error:'+str(-1)})
+        resp.status_code = 400
+        return resp
+        # return -1
 
-    return Response(response=json.dumps({'res':ret}),status=200,mimetype="application/json")
+    return Response(response=json.dumps(ret),status=200,mimetype="application/json")
     # return Response(response=json.dumps({"res":"ok"}),status=200,mimetype="application/json")
 
 @app.route('/api/test2',methods=['POST'])
 def test2():
-
+    data = request.json
+    print(data)
+    V = numpy.array(data['array'])
+    # print(d)
+    # print(json.loads(d))
+    # ds = json.loads(d)
+    # V = [float(next(ds)) for x in range(timesteps)]
+    # V = numpy.array(json.loads(d))
+    print(V[1])
+    # V = json.loads(d)
+    # print(V[1])
     return Response(response=json.dumps({"res":"ok"}),status=200,mimetype="application/json")
 
 

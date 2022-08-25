@@ -71,9 +71,11 @@ def convert_to_cpu(cpu):
     return float(re.search("([0-9]*[.])?[0-9]+",cpu)[0]) * mult
 
 def update_resources():
+    
+    global resources_available
+    update_node_resources()
     mutex.acquire()
     res_pods = v1.list_pod_for_all_namespaces()
-    global resources_available
     resources_available = copy.deepcopy(resources_allocatable)
     for pod in res_pods.items:
         for container in pod.spec.containers:
@@ -93,6 +95,8 @@ def update_resources():
                         # print(rss)
                         # print(divider)
                 # print(resources_available)
+                # if not resources_available[pod.spec.node_name][key]:
+
                 resources_available[pod.spec.node_name][key] = float(resources_available[pod.spec.node_name][key]) - float(rss)
                 # print(resources_available[pod.spec.node_name][key])
     mutex.release()
@@ -232,7 +236,7 @@ def register():
     available_versions=data['availableVersions']
     print(available_versions)
     sorted_versions=sort_versions(available_versions,curr_app)
-    found=False
+    # found=False
     i=0
     while not is_resource_available(sorted_versions[i]['device'],1):
         # resource_to_request=versions_list[i]
@@ -315,12 +319,32 @@ def alter():
 
 
     available_versions=data['availableVersions']
-    print("Available versions:", available_versions)
-    selected_version=select_version(available_versions,found_entry)
-    print("Selected version:", selected_version)
-    resource_to_request = selected_version['device']
+    print(available_versions)
+    sorted_versions=sort_versions(available_versions,found_entry)
+    # found=False
+    i=0
+    while i < len(sorted_versions)-1 and not is_resource_available(sorted_versions[i]['device'],1):
+        # resource_to_request=versions_list[i]
+        print(is_resource_available(sorted_versions[i]['device'],1))
+        i=i+1
+
+    # resource_to_request=sorted_versions[i]
+    selected_version=sorted_versions[i]
+    print(i,selected_version)
+
+    found_entry.accel.last_mon=datetime.now()
+    # found_entry.accel.scheduled_at=datetime.now()
+    # found_entry.accel.version_name=selected_version['name']
+    # found_entry.accel.accelerator_type=selected_version['device']
+    # found_entry.yaml_file=selected_version['configFile']
+    # found_entry.accel.version_list=sorted_versions
+
+    # print("Available versions:", available_versions)
+    # selected_version=select_version(available_versions,found_entry)
+    # print("Selected version:", selected_version)
+    # resource_to_request = selected_version['device']
     # Compare the current with the requested versions
-    if selected_version['name'] == found_entry.accel.version:
+    if selected_version['name'] == found_entry.accel.version_name:
         # We have the same version
         # Let's check the yaml file as well to be sure
         if selected_version['configFile'] == found_entry.yaml_file:
@@ -340,7 +364,7 @@ def alter():
         else:
             # ret="Different version name, different config file"
             found_entry.accel.scheduled_at=datetime.now()
-            found_entry.accel.version=selected_version['name']
+            found_entry.accel.version_name=selected_version['name']
             found_entry.accel.accelerator_type=selected_version['device']
             found_entry.yaml_file=selected_version['configFile']
             r.set(data['name']+":"+data['namespace'],pickle.dumps(found_entry))
@@ -351,18 +375,18 @@ def alter():
     return Response(response=json.dumps(ret),status=status,mimetype='application.json')
 
 def get_metric(version, metric):
-    val = version['optimization'][metric]
+    val = version['advertisedMetric'][metric]
     if metric == 'latency':
-        val = convert_to_ms(version['optimization'][metric])
+        val = convert_to_ms(version['advertisedMetric'][metric])
     return val
 
 def sort_versions(versions, app):
     # reverse=False
     version_list=[]
     if app.accel.latency_req==-1:
-        sorted_versions=sorted(versions,key=lambda x:convert_to_ms(x['optimization']['latency']), reverse=False)
+        sorted_versions=sorted(versions,key=lambda x:convert_to_ms(x['advertisedMetric']['latency']), reverse=False)
     else:
-        sorted_versions=sorted(versions,key=lambda x:x['optimization']['throughput'], reverse=True)
+        sorted_versions=sorted(versions,key=lambda x:x['advertisedMetric']['throughput'], reverse=True)
     
     print("Versions not sorted:",versions)
     print("Requiremenents:", app.accel.latency_req)
@@ -386,20 +410,20 @@ def select_version(versions,app):
             min_lat=sys.maxsize * 2 + 1
             for version in versions:
                 if is_resource_available(version['device'],1):
-                    if 'latency' in version['optimization']:
-                        if isValid(version['optimization']['latency']):
-                                curr_lat = convert_to_ms(version['optimization']['latency'])
+                    if 'latency' in version['advertisedMetric']:
+                        if isValid(version['advertisedMetric']['latency']):
+                                curr_lat = convert_to_ms(version['advertisedMetric']['latency'])
                         if curr_lat < min_lat:
-                            min_lat = version['optimization']['latency']
+                            min_lat = version['advertisedMetric']['latency']
                             selected_version = version
             
         # If we need best-effort for throughput
     elif app.accel.rps_req == -1:
         max_rps=0
         for version in versions:
-            if 'throughput' in version['optimization']:
-                if version['optimization']['throughput'] > max_rps:
-                    max_rps = version['optimization']['throughput']
+            if 'throughput' in version['advertisedMetric']:
+                if version['advertisedMetric']['throughput'] > max_rps:
+                    max_rps = version['advertisedMetric']['throughput']
                     selected_version = version
     else:
         # TODO

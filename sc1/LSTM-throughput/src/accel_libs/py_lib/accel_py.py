@@ -198,9 +198,9 @@ def print_res2(res_ptr, res, batch, timesteps,ret_count=3):
     ret=[]
     for i in range(int(batch)):
         if(res[i*PARAM[0]*PARAM[1]+(int(timesteps)-1)]>0.5):
-            curr="Attack detected : " + str(res[i*PARAM[0]*PARAM[1]+(int(timesteps)-1)])
+            curr="Anomaly: yes (" + str(res[i*PARAM[0]*PARAM[1]+(int(timesteps)-1)])[0:4] + ")"
         else:
-            curr="Normal process  : "+str(res[i*PARAM[0]*PARAM[1]+(int(timesteps)-1)])
+            curr="Anomaly: no ("+str(res[i*PARAM[0]*PARAM[1]+(int(timesteps)-1)])[0:4] +")"
         # print(curr)
         if i < ret_count:
             print(curr)

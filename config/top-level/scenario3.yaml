@@ -12,22 +12,22 @@ availableVersions:
       cpu:
         model: intel-xeon
         cores: 8
-    advertisedResults:
+    shownResults:
     - latency
     # YAML File could be local or on github repo?!
   - name: fgpa-u280-latency
     objective: latency
     device: alveo-u280
-    advertisedResults:
+    shownResults:
     - latency
   - name: nvidia-tesla-v100-latency
     objective: latency
     device: tesla-v100
-    advertisedResults:
+    shownResults:
     - latency
   - name: fgpa-mpsoc
     objective: latency
     device: mpsoc-104
-    advertisedResults:
+    shownResults:
     - latency
 
