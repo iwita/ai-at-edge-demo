@@ -19,9 +19,9 @@ import cv2
 from ctypes import *
 from typing import List
 import numpy as np
-import vart
-import pathlib
-import xir
+#import vart
+#import pathlib
+#import xir
 import threading
 import sys
 import argparse
@@ -38,7 +38,6 @@ import torch
 
 # Is the kernel already initialized?
 initialized=False
-
 logging.basicConfig(level=logging.DEBUG) #is this needed for logging?
 
 # This variable is the model
@@ -46,7 +45,7 @@ graph_func = None
 
 divider = '------------------------------------'
 
-def init_kernel(model_path):
+def init_kernel(model_path,batch_size):
     st=datetime.now()
     global graph_func
     #Load Model
@@ -58,16 +57,22 @@ def init_kernel(model_path):
     app.logger.info("{}".format(graph_func.structured_outputs))
     app.logger.info("{}".format(graph_func))
     et = datetime.now()
-    elasped_time_i=et-st
+    elapsed_time_i=et-st
     app.logger.info('Initialize time:\t' + str(elapsed_time_i.total_seconds()*1000) + 'ms')
     #WARMUP = True
     #if(WARMUP == True):
+    WARMUP = True
+    if(WARMUP == True):
+        x_input = tf.zeros(shape =(batch_size, 224, 224, 3))
+        output_data = graph_func(x_input)
+        wm = datetime.now()
+        app.logger.info('Warmup time:\t' + str((wm-et).total_seconds()*1000) + 'ms')  
 
 def inference(indata,batch_size, model_path):
-    full_start = timer()
+    full_start = time.time()
     global graph_func
     print(divider)
-    app.logger.info{"{:s}".format(divider))
+    app.logger.info("{:s}".format(divider))
     # REST API INPUT BOILERPLATE --------------------------------
     # We get the zip file with the images as Bytes
     zip_ref = zipfile.ZipFile(io.BytesIO(indata), 'r')
@@ -111,16 +116,16 @@ def inference(indata,batch_size, model_path):
        x_test = element[0]
        if(i == iterations): # Only last iteration
            x_input = tf.zeros(shape =(batch_size, 224, 224, 3))
-           x_input[0:x_test.shape[0]) = x_test[:]
+           x_input[0:x_test.shape[0]] = x_test[:]
        else:    
            x_input =tf.constant(x_test[:])
-       start = timer()
+       start = time.time()
        # Inference
        output_data = graph_func(x_input) 
-       # This is really important. GPU inference run asynchronously, we need to wait for the process to end before using timer()
+       # This is really important. GPU inference run asynchronously, we need to wait for the process to end before using time()
        # Tensorflow doesn't have this fucntionality, therefore torch.cuda.synchronize is used
        torch.cuda.synchronize()
-       end = timer()
+       end = time.time()
        timetotal_execution += end - start # Time in seconds, e.g. 5.38091952400282 
        if(i == iterations): # Only last iteration
            valid_outputs = x_test.shape[0]
@@ -128,7 +133,8 @@ def inference(indata,batch_size, model_path):
            valid_outputs = batch_size
        # Calculate the probs 
        for j in range(valid_outputs):
-           probs = softmax(output_data[list(output_data.keys())[0]][j])
+           probs = softmax(output_data[list(output_data.keys())[0]][j].numpy())
+           print(probs.shape)
            preds.append(tf.keras.applications.imagenet_utils.decode_predictions(probs[0], top=5)[0])
        i = i + 1
     # END OF EXPERIMENT ------------------------------------------
@@ -136,10 +142,10 @@ def inference(indata,batch_size, model_path):
     # BENCHMARKS -------------------------------------------------
     #fps = float(runTotal / timetotal_execution)
     avg_time_execution = timetotal_execution / (iterations + remainder_iteration)
-    preds = []
-    for i in range(len(out_q)):
-        probs = softmax(out_q[i])
-        preds.append(tf.keras.applications.imagenet_utils.decode_predictions(probs[0], top=5)[0])
+    # preds = []
+    # for i in range(len(out_q)):
+    #     probs = softmax(out_q[i])
+    #     preds.append(tf.keras.applications.imagenet_utils.decode_predictions(probs[0], top=5)[0])
     # END OF BENCHMARKS ------------------------------------------
     #
     # REST API OUTPUT BOILERPLATE --------------------------------
@@ -150,11 +156,11 @@ def inference(indata,batch_size, model_path):
     # END OF REST API OUTPUT BOILERPLATE -------------------------
     #
     # PRINTS -----------------------------------------------------
-    full_end = timer()
+    full_end = time.time()
     full_time = full_end - full_start
     avg_full_time = full_time/ (iterations + remainder_iteration)
     app.logger.info('Processing Latency: (data preparation + execution):\t%.2fms (%.2f + %.2f)', avg_full_time*1000, (avg_full_time - avg_time_execution)*1000, avg_time_execution*1000)
-    app.logger.info('Total throughput (batch_size) in outputs per second:\t\t%.2fps (%d)', runTotal/avg_full_time, batch_size)
+    app.logger.info('Total throughput %d in outputs per second:\t\t%.2fps', batch_size, runTotal/avg_full_time)
     # END OF PRINTS ----------------------------------------------
     # Return Dictionary
     return out_dict
@@ -192,7 +198,7 @@ def test():
     global initialized
     # Check if this is the first run
     if not initialized:
-        init_kernel(MODEL_PATH) # This changes from case to case
+        init_kernel(MODEL_PATH, BATCH_SIZE) # This changes from case to case
         print("init")
         app.logger.info("init")
         initialized=True
