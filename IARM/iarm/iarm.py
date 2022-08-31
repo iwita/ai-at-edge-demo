@@ -75,7 +75,7 @@ def update_resources():
     global resources_available
     update_node_resources()
     mutex.acquire()
-    res_pods = v1.list_pod_for_all_namespaces()
+    res_pods = v1.list_pod_for_all_namespaces(field_selector='status.phase==Running')
     resources_available = copy.deepcopy(resources_allocatable)
     for pod in res_pods.items:
         for container in pod.spec.containers:

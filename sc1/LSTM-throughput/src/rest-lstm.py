@@ -102,7 +102,12 @@ def test():
         resp = jsonify({'message' : 'No array included in the request'})
         resp.status_code = 400
         return resp
+    # print time before
+    start_V = datetime.datetime.now()
     V = numpy.array(data['array'])
+    end_V = datetime.datetime.now()
+    app.logger.info("%.2f", (end_V-start_V).total_seconds()*1000)
+    # print time after
     try:
         # print(file.filename)
 
@@ -116,6 +121,7 @@ def test():
             #print("---- Run: ", i," ----")
             #print("Convert input to short")
             st = datetime.datetime.now()
+            # na mpei edw to V = numpy.array(data['array'])
             data_ptr = in_ptr(valuein[(i*int(batch)*int(timesteps)):(((i+1)*int(batch)*int(timesteps)))], batch, timesteps)
             et = datetime.datetime.now()
             elapsed_time_d = et - st

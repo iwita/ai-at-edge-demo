@@ -39,7 +39,7 @@ start = datetime.datetime.now()
 r = requests.post(test_url, json=data)
 end = datetime.datetime.now()
 print("E2E Latency:\t %.2fms" % ((end-start).total_seconds()*1000))
-print("Throughput:\t %.2frps" % (1000/((end-start).total_seconds()*1000)))
+print("Throughput:\t %.2frps" % (batch*1000/((end-start).total_seconds()*1000)))
 
 # encoded = json.dumps(V, cls=NumbpyArrayEncoder)
 # print(encoded)
