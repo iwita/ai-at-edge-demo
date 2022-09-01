@@ -30,7 +30,7 @@ COPY rest-cnn.py /home/Documents
 COPY ResNet50_ImageNet_70_90_7_76GF_TensorRT_INT8_BATCH_128 /home/Documents/ResNet50_ImageNet_70_90_7_76GF_TensorRT_INT8_BATCH_128
 # COPY setup.sh /workspace
 COPY client.py /home/Documents
-
+COPY imagenet_class_index.json /home/Documents/imagenet_class_index.json
 WORKDIR /home/Documents
 
 # RUN chown -R vitis-ai-user:vitis-ai-group /workspace

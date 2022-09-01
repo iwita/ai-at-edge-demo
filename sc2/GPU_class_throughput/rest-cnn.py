@@ -38,16 +38,20 @@ import torch
 
 # Is the kernel already initialized?
 initialized=False
+warmed_up = False
 logging.basicConfig(level=logging.DEBUG) #is this needed for logging?
 
 # This variable is the model
 graph_func = None
-
+# This variable contains the json with the class names
+CLASS_INDEX = None
+CLASS_INDEX_path = 'imagenet_class_index.json' 
 divider = '------------------------------------'
 
 def init_kernel(model_path,batch_size):
     st=datetime.now()
     global graph_func
+    global CLASS_INDEX
     #Load Model
     tensorRT_model_loaded = tf.saved_model.load(model_path, tags=[tag_constants.SERVING])
     graph_func = tensorRT_model_loaded.signatures[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY]
@@ -57,16 +61,28 @@ def init_kernel(model_path,batch_size):
     app.logger.info("{}".format(graph_func.structured_outputs))
     app.logger.info("{}".format(graph_func))
     et = datetime.now()
+    # Load CLASS_INDEX
+    if(CLASS_INDEX is None):
+        with open(CLASS_INDEX_path) as f:
+            CLASS_INDEX = json.load(f)
     elapsed_time_i=et-st
     app.logger.info('Initialize time:\t' + str(elapsed_time_i.total_seconds()*1000) + 'ms')
-    #WARMUP = True
-    #if(WARMUP == True):
-    WARMUP = True
-    if(WARMUP == True):
-        x_input = tf.zeros(shape =(batch_size, 224, 224, 3))
-        output_data = graph_func(x_input)
-        wm = datetime.now()
-        app.logger.info('Warmup time:\t' + str((wm-et).total_seconds()*1000) + 'ms')  
+
+def warm_up(batch_size):
+    wm_start = datetime.now()
+    global graph_func
+    preds = []
+    x_dummy = tf.random.normal(shape =(batch_size, 224, 224, 3))
+    x_input = tf.constant(x_dummy[:])
+    output_data = graph_func(x_input)
+    torch.cuda.synchronize()
+    for j in range(batch_size):
+        probs = softmax(output_data[list(output_data.keys())[0]][j].numpy())
+        preds.append(decode_predictions(probs.reshape(1,-1), top=5)[0])
+    for pred in preds:
+        print(pred)
+    wm_end = datetime.now()
+    app.logger.info('Warmup time:\t' + str((wm_end-wm_start).total_seconds()*1000) + 'ms')
 
 def inference(indata,batch_size, model_path):
     full_start = time.time()
@@ -81,6 +97,7 @@ def inference(indata,batch_size, model_path):
     # This is the name of the folder of the zip that contains all the images
     FOLDERNAME = "./ImageNet_val_folder_1000"
     listimage=os.listdir(FOLDERNAME)
+    listimage.sort()
     runTotal = len(listimage)
     # END OF REST API INPUT BOILERPLATE -------------------------
     # 
@@ -90,12 +107,11 @@ def inference(indata,batch_size, model_path):
         labels = None,
         label_mode = None,
         color_mode = "rgb",
-        batch_size = 1,
+        batch_size = batch_size,
         image_size = (224,224),
         shuffle = False
     )
     # Preprocess
-    ds_val = ds_val.batch(batch_size,drop_remainder=False)
     ds_val = ds_val.map(lambda x: preprocess(x,  model_path))
     # END OF CREATE AND PREPROCESS DATASET ----------------------
     #
@@ -108,20 +124,23 @@ def inference(indata,batch_size, model_path):
     iterations = num_samples // batch_size
     if(iterations * batch_size != num_samples):
         remainder_iteration = 1
-    else: 
+    else:
         remainder_iteration = 0
-    preds = []    
+    preds = []
     app.logger.info("Starting")
+    app.logger.info("Iterations: {}".format(iterations + remainder_iteration))
     for element in ds_val.take(iterations + remainder_iteration):
-       x_test = element[0]
+       x_test = element
        if(i == iterations): # Only last iteration
            x_input = tf.zeros(shape =(batch_size, 224, 224, 3))
-           x_input[0:x_test.shape[0]] = x_test[:]
-       else:    
+           x_input_list = tf.unstack(x_input)
+           x_input_list[0:x_test.shape[0]] = x_test[:]
+           x_input = tf.stack(x_input_list)
+       else:
            x_input =tf.constant(x_test[:])
        start = time.time()
        # Inference
-       output_data = graph_func(x_input) 
+       output_data = graph_func(x_input)
        # This is really important. GPU inference run asynchronously, we need to wait for the process to end before using time()
        # Tensorflow doesn't have this fucntionality, therefore torch.cuda.synchronize is used
        torch.cuda.synchronize()
@@ -129,23 +148,18 @@ def inference(indata,batch_size, model_path):
        timetotal_execution += end - start # Time in seconds, e.g. 5.38091952400282 
        if(i == iterations): # Only last iteration
            valid_outputs = x_test.shape[0]
-       else:    
+       else:
            valid_outputs = batch_size
-       # Calculate the probs 
+       # Calculate the probs
        for j in range(valid_outputs):
            probs = softmax(output_data[list(output_data.keys())[0]][j].numpy())
-           print(probs.shape)
-           preds.append(tf.keras.applications.imagenet_utils.decode_predictions(probs[0], top=5)[0])
+           preds.append(decode_predictions(probs.reshape(1,-1), top=5)[0])
+           #preds.append(tf.keras.applications.imagenet_utils.decode_predictions(probs.reshape(1,-1), top=5)[0])
        i = i + 1
     # END OF EXPERIMENT ------------------------------------------
     #
     # BENCHMARKS -------------------------------------------------
-    #fps = float(runTotal / timetotal_execution)
     avg_time_execution = timetotal_execution / (iterations + remainder_iteration)
-    # preds = []
-    # for i in range(len(out_q)):
-    #     probs = softmax(out_q[i])
-    #     preds.append(tf.keras.applications.imagenet_utils.decode_predictions(probs[0], top=5)[0])
     # END OF BENCHMARKS ------------------------------------------
     #
     # REST API OUTPUT BOILERPLATE --------------------------------
@@ -159,27 +173,29 @@ def inference(indata,batch_size, model_path):
     full_end = time.time()
     full_time = full_end - full_start
     avg_full_time = full_time/ (iterations + remainder_iteration)
-    app.logger.info('Processing Latency: (data preparation + execution):\t%.2fms (%.2f + %.2f)', avg_full_time*1000, (avg_full_time - avg_time_execution)*1000, avg_time_execution*1000)
-    app.logger.info('Total throughput %d in outputs per second:\t\t%.2fps', batch_size, runTotal/avg_full_time)
+    IMAGE_TO_SHOW = 796
+    to_print = out_dict[listimage[IMAGE_TO_SHOW]]
+    app.logger.info(' ')
+    app.logger.info('Processing Latency: (data preparation + execution) :\t%.2fms (%.2f + %.2f)', avg_full_time*1000, (avg_full_time - avg_time_execution)*1000, avg_time_execution*1000)
+    app.logger.info('Total throughput (batch_size) in frames per second :\t\t%.2ffps (%d)', runTotal/full_time, batch_size)
+    app.logger.info(' ')
+    app.logger.info('AIF output: \t class = %s (%03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f)',
+                    to_print[0][1], to_print[0][0], to_print[0][2], to_print[1][0], to_print[1][2],
+                    to_print[2][0], to_print[2][2], to_print[3][0], to_print[3][2], to_print[4][0], to_print[4][2])
+    app.logger.info(' ')
+    app.logger.info('AIF output, ImageName class=name (top 5 classes with percentages):')
+    app.logger.info('Image: %s class = %s (%03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f)', listimage[IMAGE_TO_SHOW],
+                    to_print[0][1], to_print[0][0], to_print[0][2], to_print[1][0], to_print[1][2],
+                    to_print[2][0], to_print[2][2], to_print[3][0], to_print[3][2], to_print[4][0], to_print[4][2])
+
     # END OF PRINTS ----------------------------------------------
     # Return Dictionary
     return out_dict
 
 def preprocess(x_test, MODEL_PATH):
    # Preprocess images
-   if "ResNet50" in MODEL_PATH:
-      x_test = tf.keras.applications.resnet50.preprocess_input(x_test)
-   elif "NASNet_large" in MODEL_PATH:
-      x_test = tf.image.resize(x_test, (331, 331))
-      x_test = tf.keras.applications.nasnet.preprocess_input(x_test)
-   elif "MobileNet" in MODEL_PATH:
-      x_test = tf.cast(x=x_test, dtype=tf.float32)/127.5 - 1.0
-   elif "LeNet5" in MODEL_PATH:
-      x_test = tf.image.rgb_to_grayscale(x_test)
-      x_test = tf.cast(x=x_test, dtype=tf.float32)/255.0
-   elif ("ResNetV2152" in MODEL_PATH) or ("ResNet152" in MODEL_PATH) or ("InceptionV4" in MODEL_PATH):
-      x_test = tf.image.resize(x_test, (299, 299))
-      x_test = tf.cast(x=x_test, dtype=tf.float32)/127.5 - 1.0
+   # if "ResNet50" in MODEL_PATH:
+   x_test = tf.keras.applications.resnet50.preprocess_input(x_test)
    return x_test
 
 def softmax(logits):
@@ -187,6 +203,18 @@ def softmax(logits):
    scores = logits - np.max(logits)
    probs = np.exp(scores.astype(np.float64))/np.sum(np.exp(scores.astype(np.float64)))
    return probs
+
+def decode_predictions(preds, top=5):
+    # tf.keras.applications.imagenet_utils.decode_predictions
+    # CLASS_INDEX must come from imagenet_class_index.json
+    global CLASS_INDEX
+    results = []
+    for pred in preds:
+        top_indices = pred.argsort()[-top:][::-1]
+        result = [(int(i), CLASS_INDEX[str(i)][1], pred[i]) for i in top_indices]
+        result.sort(key=lambda x: x[2], reverse=True)
+        results.append(result)
+    return results
 
 app=Flask(__name__)
 
@@ -196,18 +224,24 @@ def test():
     BATCH_SIZE = 128
     r = request
     global initialized
+    global warmed_up
     # Check if this is the first run
     if not initialized:
-        init_kernel(MODEL_PATH, BATCH_SIZE) # This changes from case to case
         print("init")
         app.logger.info("init")
+        init_kernel(MODEL_PATH, BATCH_SIZE) # This changes from case to case
         initialized=True
+    if not warmed_up:
+        print("warm_up")
+        app.logger.info("warm_up")
+        warm_up(BATCH_SIZE)
+        warmed_up=True
     file = r.files['archive']
     file_like_object = file.read()
     # Call the service here
     print("inference")
     app.logger.info("inference")
-    
+
     preds = inference(file_like_object, BATCH_SIZE, MODEL_PATH) # This changes from case to case
 
     # Return the dicitonary in json form
@@ -219,4 +253,5 @@ def test2():
     return Response(response=json.dumps({"res":"ok"}),status=200,mimetype="application/json")
 
 
-app.run(host="0.0.0.0",port=3000) # This changes each time depending on the experiment
+app.run(host="0.0.0.0",port=3001) # This changes each time depending on the experiment
+
