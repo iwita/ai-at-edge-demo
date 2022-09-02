@@ -68,11 +68,8 @@ def init_kernel(model_path):
     #Load Model
     sess_opt = ort.SessionOptions()
     sess_opt.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
-    sess = ort.InferenceSession(path_or_bytes=MODEL_PATH, sess_options=sess_opt, providers=providers)
-    tensorRT_model_loaded = tf.saved_model.load(model_path, tags=[tag_constants.SERVING])
-    graph_func = tensorRT_model_loaded.signatures[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY]
+    sess = ort.InferenceSession(path_or_bytes=model_path, sess_options=sess_opt, providers=providers)
     # Useful for Debugging
-    signature_keys = list(tensorRT_model_loaded.signatures.keys())
     app.logger.info("{}".format(sess.get_providers()))
     app.logger.info("{}".format(sess.get_provider_options()))
     app.logger.info("{}".format(sess.get_session_options()))
@@ -238,7 +235,7 @@ app=Flask(__name__)
 
 @app.route('/api/infer',methods=['POST'])
 def test():
-    MODEL_PATH = "ResNet50_ImageNet_70_90_7_76GF_TensorRT_INT8_BATCH_128"
+    MODEL_PATH = "ResNet50_ImageNet_70_90_7_76GF_B32.onnx"
     BATCH_SIZE = 32
     r = request
     global initialized
@@ -247,7 +244,7 @@ def test():
     if not initialized:
         print("init")
         app.logger.info("init")
-        init_kernel(MODEL_PATH, BATCH_SIZE) # This changes from case to case
+        init_kernel(MODEL_PATH) # This changes from case to case
         initialized=True
     if not warmed_up:
         print("warm_up")
