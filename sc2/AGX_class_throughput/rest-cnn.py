@@ -91,7 +91,7 @@ def warm_up(batch_size):
     output_data = sess.run([],{input_name: x_input.numpy()})[0]
     #torch.cuda.synchronize()
     for j in range(batch_size):
-        probs = softmax(output_data[j].numpy())
+        probs = softmax(output_data[j])
         preds.append(decode_predictions(probs.reshape(1,-1), top=5)[0])
     for pred in preds:
         print(pred)
@@ -167,7 +167,7 @@ def inference(indata,batch_size, model_path):
            valid_outputs = batch_size
        # Calculate the probs
        for j in range(valid_outputs):
-           probs = softmax(output_data[j].numpy())
+           probs = softmax(output_data[j])
            preds.append(decode_predictions(probs.reshape(1,-1), top=5)[0])
            #preds.append(tf.keras.applications.imagenet_utils.decode_predictions(probs.reshape(1,-1), top=5)[0])
        i = i + 1
