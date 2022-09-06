@@ -4,9 +4,7 @@ import requests
 import random
 import time
 import sys
-import cv2
 import json
-import zipfile
 import datetime
 IMAGE_ZIP_PATH = './ImageNet_val_folder_32_no_compression_images.zip' # Check the size 
 DATASET_SIZE = 32
@@ -34,6 +32,8 @@ with open('data.json', 'w') as f:
 
 def show_image(image_num, zip_path):
     # Requires cv2 installed on client
+    import cv2
+    import zipfile
     zip_ref = zipfile.ZipFile(zip_path, 'r')
     zip_ref.extractall("./")
     zip_ref.close()
