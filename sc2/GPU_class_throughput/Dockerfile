@@ -19,7 +19,7 @@ COPY imagenet_class_index.json /home/Documents/imagenet_class_index.json
 WORKDIR /home/Documents
 
 ENV FLASK_APP=rest-cnn.py
-EXPOSE 3000
+EXPOSE 3001
 
 # CMD source /workspace/setup.sh $DEVICE && /usr/bin/python3 rest-cnn.py
 # CMD /usr/bin/python3 rest-cnn.py

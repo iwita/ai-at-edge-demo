@@ -72,11 +72,6 @@ def warm_up(batch_size):
     x_input = tf.constant(x_dummy[:])
     output_data = graph_func(x_input)
     torch.cuda.synchronize()
-    for j in range(batch_size):
-        probs = softmax(output_data[list(output_data.keys())[0]][j].numpy())
-        preds.append(decode_predictions(probs.reshape(1,-1), top=5)[0])
-    for pred in preds:
-        print(pred)
     wm_end = datetime.now()
     app.logger.info('Warmup time :\t' + str(int((wm_end-wm_start).total_seconds()*1000)) + ' ms')
 
@@ -175,7 +170,7 @@ def inference(indata,batch_size, model_path):
     app.logger.info('\tProcessing Latency : (data preparation + execution) :  \t%d ms (%.2f + %.2f)', int(avg_full_time*1000), int((avg_full_time - avg_time_execution)*1000), int(avg_time_execution*1000))
     app.logger.info('\tTotal throughput (batch_size) in frames per second  :  \t%d fps (%d)', int(runTotal/full_time), batch_size)
     app.logger.info(' ')
-    app.logger.info('\tAIF output: top-class name (top-5 classes percentages) \t class = "%s" (%03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f)',
+    app.logger.info('\tAIF output: top-class name (top-5 classes percentages) \tclass = "%s" (%03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f)',
                     to_print[0][1], to_print[0][0], to_print[0][2], to_print[1][0], to_print[1][2],
                     to_print[2][0], to_print[2][2], to_print[3][0], to_print[3][2], to_print[4][0], to_print[4][2])
 

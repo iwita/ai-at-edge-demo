@@ -14,7 +14,7 @@ RUN /usr/bin/python3 -m pip install --upgrade tensorflow
 
 RUN /usr/bin/python3 -m pip install opencv-python requests
 
-COPY rest-cnn-nls.py /workspace/
+COPY rest-cnn.py /workspace/
 # COPY test_images /workspace/test_images
 COPY customcnn.xmodel /workspace
 COPY setup.sh /workspace
@@ -27,6 +27,7 @@ RUN chown -R vitis-ai-user:vitis-ai-group /workspace
 # RUN pip3 install -r requirements.txt 
 
 ENV FLASK_APP=rest-cnn-nls.py
-EXPOSE 3000
+EXPOSE 3002
 
-CMD source /workspace/setup.sh $DEVICE && /usr/bin/python3 rest-cnn-nls.py
+#CMD source /workspace/setup.sh $DEVICE && /usr/bin/python3 rest-cnn-nls.py
+CMD sleep infinity
