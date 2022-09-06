@@ -20,7 +20,7 @@ print(type(fileobj))
 start = datetime.datetime.now()
 response = requests.post(test_url, data={"hi":"hello"}, files={"archive": ("images.zip", fileobj, "application/zip")})
 end = datetime.datetime.now()
-print("E2E Latency :\t %d ms" % (int(end-start).total_seconds()*1000)))
+print("E2E Latency :\t %d ms" % (int((end-start).total_seconds()*1000)))
 print("Throughput  :\t %d fps"  % (int(DATASET_SIZE/((end-start).total_seconds()))))
 # decode response
 with open('data.json', 'w') as f:
