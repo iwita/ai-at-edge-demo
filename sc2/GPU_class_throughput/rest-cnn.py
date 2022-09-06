@@ -15,13 +15,9 @@ from datetime import datetime
 from flask import Flask, request, Response
 import json
 import numpy as np
-import cv2
 from ctypes import *
 from typing import List
 import numpy as np
-#import vart
-#import pathlib
-#import xir
 import threading
 import sys
 import argparse
@@ -66,7 +62,7 @@ def init_kernel(model_path,batch_size):
         with open(CLASS_INDEX_path) as f:
             CLASS_INDEX = json.load(f)
     elapsed_time_i=et-st
-    app.logger.info('Initialize time:\t' + str(elapsed_time_i.total_seconds()*1000) + 'ms')
+    app.logger.info('Initialize time :\t' + str(int(elapsed_time_i.total_seconds()*1000)) + ' ms')
 
 def warm_up(batch_size):
     wm_start = datetime.now()
@@ -82,7 +78,7 @@ def warm_up(batch_size):
     for pred in preds:
         print(pred)
     wm_end = datetime.now()
-    app.logger.info('Warmup time:\t' + str((wm_end-wm_start).total_seconds()*1000) + 'ms')
+    app.logger.info('Warmup time :\t' + str(int((wm_end-wm_start).total_seconds()*1000)) + ' ms')
 
 def inference(indata,batch_size, model_path):
     full_start = time.time()
@@ -95,7 +91,7 @@ def inference(indata,batch_size, model_path):
     zip_ref.extractall("./")
     zip_ref.close()
     # This is the name of the folder of the zip that contains all the images
-    FOLDERNAME = "./ImageNet_val_folder_1000"
+    FOLDERNAME = "./ImageNet_val_folder"
     listimage=os.listdir(FOLDERNAME)
     listimage.sort()
     runTotal = len(listimage)
@@ -173,20 +169,16 @@ def inference(indata,batch_size, model_path):
     full_end = time.time()
     full_time = full_end - full_start
     avg_full_time = full_time/ (iterations + remainder_iteration)
-    IMAGE_TO_SHOW = 796
+    IMAGE_TO_SHOW = 8
     to_print = out_dict[listimage[IMAGE_TO_SHOW]]
     app.logger.info(' ')
-    app.logger.info('Processing Latency: (data preparation + execution) :\t%.2fms (%.2f + %.2f)', avg_full_time*1000, (avg_full_time - avg_time_execution)*1000, avg_time_execution*1000)
-    app.logger.info('Total throughput (batch_size) in frames per second :\t\t%.2ffps (%d)', runTotal/full_time, batch_size)
+    app.logger.info('\tProcessing Latency : (data preparation + execution) :  \t%d ms (%.2f + %.2f)', int(avg_full_time*1000), int((avg_full_time - avg_time_execution)*1000), int(avg_time_execution*1000))
+    app.logger.info('\tTotal throughput (batch_size) in frames per second  :  \t%d fps (%d)', int(runTotal/full_time), batch_size)
     app.logger.info(' ')
-    app.logger.info('AIF output: \t class = %s (%03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f)',
+    app.logger.info('\tAIF output: top-class name (top-5 classes percentages) \t class = "%s" (%03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f)',
                     to_print[0][1], to_print[0][0], to_print[0][2], to_print[1][0], to_print[1][2],
                     to_print[2][0], to_print[2][2], to_print[3][0], to_print[3][2], to_print[4][0], to_print[4][2])
-    app.logger.info(' ')
-    app.logger.info('AIF output, ImageName class=name (top 5 classes with percentages):')
-    app.logger.info('Image: %s class = %s (%03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f)', listimage[IMAGE_TO_SHOW],
-                    to_print[0][1], to_print[0][0], to_print[0][2], to_print[1][0], to_print[1][2],
-                    to_print[2][0], to_print[2][2], to_print[3][0], to_print[3][2], to_print[4][0], to_print[4][2])
+
 
     # END OF PRINTS ----------------------------------------------
     # Return Dictionary

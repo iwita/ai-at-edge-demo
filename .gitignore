@@ -6,3 +6,4 @@ Images*
 *.xmodel
 .kube/*
 **/ResNet50_ImageNet_70_90_7_76GF_TensorRT_INT8_BATCH_128/*
+*.onnx
