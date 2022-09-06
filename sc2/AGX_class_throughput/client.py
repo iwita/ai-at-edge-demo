@@ -44,6 +44,10 @@ def show_image(image_num, zip_path):
     listimage=os.listdir(FOLDERNAME)
     listimage.sort()
     
+    runTotal = len(listimage)
+    if(image_num >= runTotal):
+         image_num = 0
+
     image = cv2.imread(os.path.join(FOLDERNAME,listimage[image_num]),cv2.IMREAD_COLOR)
     cv2.imshow('Classified Image', image)
     cv2.waitKey(0)

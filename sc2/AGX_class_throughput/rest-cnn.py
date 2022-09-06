@@ -175,6 +175,8 @@ def inference(indata,batch_size, model_path):
     full_time = full_end - full_start
     avg_full_time = full_time/ (iterations + remainder_iteration)
     IMAGE_TO_SHOW = 8
+    if(IMAGE_TO_SHOW >= runTotal):
+         IMAGE_TO_SHOW = 0
     to_print = out_dict[listimage[IMAGE_TO_SHOW]]
     app.logger.info(' ')
     app.logger.info('\tProcessing Latency : (data preparation + execution) :  \t%d ms (%.2f + %.2f)', int(avg_full_time*1000), int((avg_full_time - avg_time_execution)*1000), int(avg_time_execution*1000))
