@@ -83,7 +83,6 @@ def inference(indata,batch_size, model_path):
     # REST API INPUT BOILERPLATE --------------------------------
     # This is the name of the folder of the zip that contains all the images
     FOLDERNAME = "./ImageNet_val_folder"
-    shutil.rmtree(FOLDERNAME)
     # We get the zip file with the images as Bytes
     zip_ref = zipfile.ZipFile(io.BytesIO(indata), 'r')
     zip_ref.extractall("./")
@@ -174,8 +173,7 @@ def inference(indata,batch_size, model_path):
     app.logger.info('\tAIF output: top-class name (top-5 classes percentages) \tclass = "%s" (%03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f)',
                     to_print[0][1], to_print[0][0], to_print[0][2], to_print[1][0], to_print[1][2],
                     to_print[2][0], to_print[2][2], to_print[3][0], to_print[3][2], to_print[4][0], to_print[4][2])
-
-
+    shutil.rmtree(FOLDERNAME, ignore_errors=True)
     # END OF PRINTS ----------------------------------------------
     # Return Dictionary
     return out_dict
