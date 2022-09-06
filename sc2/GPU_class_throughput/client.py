@@ -34,11 +34,13 @@ def show_image(image_num, zip_path):
     # Requires cv2 installed on client
     import cv2
     import zipfile
+    import shutil
+    # This is the name of the folder of the zip that contains all the images
+    FOLDERNAME = "./ImageNet_val_folder"
+    shutil.rmtree(FOLDERNAME)
     zip_ref = zipfile.ZipFile(zip_path, 'r')
     zip_ref.extractall("./")
     zip_ref.close()
-    # This is the name of the folder of the zip that contains all the images
-    FOLDERNAME = "./ImageNet_val_folder"
     listimage=os.listdir(FOLDERNAME)
     listimage.sort()
     

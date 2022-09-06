@@ -91,12 +91,13 @@ def inference(indata,batch_size, model_path):
     print(divider)
     app.logger.info("{:s}".format(divider))
     # REST API INPUT BOILERPLATE --------------------------------
+    # This is the name of the folder of the zip that contains all the images
+    FOLDERNAME = "./ImageNet_val_folder"
+    shutil.rmtree(FOLDERNAME)
     # We get the zip file with the images as Bytes
     zip_ref = zipfile.ZipFile(io.BytesIO(indata), 'r')
     zip_ref.extractall("./")
     zip_ref.close()
-    # This is the name of the folder of the zip that contains all the images
-    FOLDERNAME = "./ImageNet_val_folder"
     listimage=os.listdir(FOLDERNAME)
     listimage.sort()
     runTotal = len(listimage)
