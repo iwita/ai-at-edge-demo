@@ -30,11 +30,12 @@ ENV LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libgomp.so.1
 
 RUN mkdir -p /home/Documents
 
-COPY rest-cnn.py /home/Documents
+
 COPY ResNet50_ImageNet_70_90_7_76GF_B32.onnx /home/Documents/ResNet50_ImageNet_70_90_7_76GF_B32.onnx
+COPY calibration.flatbuffers /home/Documents/calibration.flatbuffers
 #COPY client.py /home/Documents/client.py
 COPY imagenet_class_index.json /home/Documents/imagenet_class_index.json
-COPY calibration.flatbuffers /home/Documents/calibration.flatbuffers
+COPY rest-cnn.py /home/Documents
 WORKDIR /home/Documents
  
 ENV FLASK_APP=rest-cnn.py
