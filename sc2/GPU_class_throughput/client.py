@@ -26,9 +26,23 @@ with open('data.json', 'w') as f:
 # Uncomment if you want "beautiful print"
 # print(json.dumps(json.loads(response.text), indent=4))
 
+print_AIF_output()
+
 # Uncomment if you want to show image
 # show_image(IMAGE_TO_SHOW, IMAGE_ZIP_PATH)
 
+def print_AIF_output():
+    with open('data.json') as json_file:
+        data = json.load(json_file)
+        to_print_0 = data['000_000.jpg']
+        to_print_1 = data['001_000.jpg']
+        print('AIF output: Image_1 class name (top-5 classes prob.) \tclass = "%s" ("%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f)',
+                    to_print_0[0][1], to_print_0[0][0], to_print_0[0][2], to_print_0[1][0], to_print_0[1][2],
+                    to_print_0[2][0], to_print_0[2][2], to_print_0[3][0], to_print_0[3][2], to_print_0[4][0], to_print_0[4][2])
+        print('            Image_2 class name (top-5 classes prob.) \tclass = "%s" ("%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f)',
+                    to_print_1[0][1], to_print_1[0][0], to_print_1[0][2], to_print_1[1][0], to_print_1[1][2],
+                    to_print_1[2][0], to_print_1[2][2], to_print_1[3][0], to_print_1[3][2], to_print_1[4][0], to_print_1[4][2])
+        print('            ...')
 
 def show_image(image_num, zip_path):
     # Requires cv2 installed on client
