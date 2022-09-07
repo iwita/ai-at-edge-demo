@@ -244,7 +244,7 @@ def test():
     print("inference")
     app.logger.info("inference")
 
-    preds = inference(file_like_object, BATCH_SIZE, MODEL_PATH) # This changes from case to case
+    preds = inference(r, BATCH_SIZE, MODEL_PATH) # This changes from case to case
 
     # Return the dicitonary in json form
     return Response(response=json.dumps(preds),status=200,mimetype="application/json")
