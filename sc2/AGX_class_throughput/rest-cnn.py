@@ -95,7 +95,7 @@ def inference(indata,batch_size, model_path):
     file_like_object = file.read()
     FOLDERNAME = "./ImageNet_val_folder"
     # We get the zip file with the images as Bytes
-    zip_ref = zipfile.ZipFile(io.BytesIO(indata), 'r')
+    zip_ref = zipfile.ZipFile(io.BytesIO(file_like_object), 'r')
     zip_ref.extractall("./")
     zip_ref.close()
     listimage=os.listdir(FOLDERNAME)
