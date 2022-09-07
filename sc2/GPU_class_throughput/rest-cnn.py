@@ -177,7 +177,7 @@ def inference(indata,batch_size, model_path):
     app.logger.info('\tAIF output: Image_1 class name (top-5 classes prob.) \tclass = "%s" ("%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f)',
                     to_print_0[0][1], to_print_0[0][0], to_print_0[0][2], to_print_0[1][0], to_print_0[1][2],
                     to_print_0[2][0], to_print_0[2][2], to_print_0[3][0], to_print_0[3][2], to_print_0[4][0], to_print_0[4][2])
-    app.logger.info('\t          : Image_2 class name (top-5 classes prob.) \tclass = "%s" ("%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f)',
+    app.logger.info('\t            Image_2 class name (top-5 classes prob.) \tclass = "%s" ("%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f)',
                     to_print_1[0][1], to_print_1[0][0], to_print_1[0][2], to_print_1[1][0], to_print_1[1][2],
                     to_print_1[2][0], to_print_1[2][2], to_print_1[3][0], to_print_1[3][2], to_print_1[4][0], to_print_1[4][2])
     app.logger.info('\t            ...')
