@@ -11,6 +11,7 @@
 from mimetypes import init
 import time
 import os
+import contextlib
 from datetime import datetime
 from flask import Flask, request, Response
 import json
@@ -78,13 +79,13 @@ def warm_up(batch_size):
 def inference(indata,batch_size, model_path):
     full_start = time.time()
     global graph_func
-    print(divider)
-    app.logger.info("{:s}".format(divider))
-    # REST API INPUT BOILERPLATE --------------------------------
+    # REST API INPUT BOILERPLATE ---------------file_like_object-----------------
     # This is the name of the folder of the zip that contains all the images
+    file = indata.files['archive']
+    file_like_object = file.read()
     FOLDERNAME = "./ImageNet_val_folder"
     # We get the zip file with the images as Bytes
-    zip_ref = zipfile.ZipFile(io.BytesIO(indata), 'r')
+    zip_ref = zipfile.ZipFile(io.BytesIO(file_like_object), 'r')
     zip_ref.extractall("./")
     zip_ref.close()
     listimage=os.listdir(FOLDERNAME)
@@ -93,21 +94,23 @@ def inference(indata,batch_size, model_path):
     # END OF REST API INPUT BOILERPLATE -------------------------
     # 
     # CREATE AND PREPROCESS DATASET -----------------------------
-    ds_val = tf.keras.preprocessing.image_dataset_from_directory(
-        directory = FOLDERNAME,
-        labels = None,
-        label_mode = None,
-        color_mode = "rgb",
-        batch_size = batch_size,
-        image_size = (224,224),
-        shuffle = False
-    )
+    with open(os.devnull, 'w') as devnull:
+        with contextlib.redirect_stdout(devnull):
+            # This is used to silence the bad output on stdout
+            ds_val = tf.keras.preprocessing.image_dataset_from_directory(
+                directory = FOLDERNAME,
+                labels = None,
+                label_mode = None,
+                color_mode = "rgb",
+                batch_size = batch_size,
+                image_size = (224,224),
+                shuffle = False
+            )
     # Preprocess
     ds_val = ds_val.map(lambda x: preprocess(x,  model_path))
     # END OF CREATE AND PREPROCESS DATASET ----------------------
     #
     # EXPERIMENT ------------------------------------------------
-    app.logger.info("-------------Experiment-------------")
     timetotal_execution=0.0
     i = 0
     app.logger.info("Dataset size: {}".format(runTotal))
@@ -118,8 +121,6 @@ def inference(indata,batch_size, model_path):
     else:
         remainder_iteration = 0
     preds = []
-    app.logger.info("Starting")
-    app.logger.info("Iterations: {}".format(iterations + remainder_iteration))
     for element in ds_val.take(iterations + remainder_iteration):
        x_test = element
        if(i == iterations): # Only last iteration
@@ -164,17 +165,22 @@ def inference(indata,batch_size, model_path):
     full_end = time.time()
     full_time = full_end - full_start
     avg_full_time = full_time/ (iterations + remainder_iteration)
-    IMAGE_TO_SHOW = 8
-    if(IMAGE_TO_SHOW >= runTotal):
-         IMAGE_TO_SHOW = 0
-    to_print = out_dict[listimage[IMAGE_TO_SHOW]]
+    #IMAGE_TO_SHOW = 8
+    #if(IMAGE_TO_SHOW >= runTotal):
+    #     IMAGE_TO_SHOW = 0
+    to_print_0 = out_dict[listimage[0]]
+    to_print_1 = out_dict[listimage[1]]
     app.logger.info(' ')
-    app.logger.info('\tProcessing Latency : (data preparation + execution) :  \t%d ms (%.2f + %.2f)', int(avg_full_time*1000), int((avg_full_time - avg_time_execution)*1000), int(avg_time_execution*1000))
-    app.logger.info('\tTotal throughput (batch_size) in frames per second  :  \t%d fps (%d)', int(runTotal/full_time), batch_size)
+    app.logger.info('\tProcessing Latency (data preparation + execution) :  \t%d ms (%d + %d)', int(avg_full_time*1000), int((avg_full_time - avg_time_execution)*1000), int(avg_time_execution*1000))
+    app.logger.info('\tTotal throughput (batch size) :                      \t%d fps (%d)', int(runTotal/full_time), batch_size)
     app.logger.info(' ')
-    app.logger.info('\tAIF output: top-class name (top-5 classes percentages) \tclass = "%s" (%03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f, %03d: %.2f)',
-                    to_print[0][1], to_print[0][0], to_print[0][2], to_print[1][0], to_print[1][2],
-                    to_print[2][0], to_print[2][2], to_print[3][0], to_print[3][2], to_print[4][0], to_print[4][2])
+    app.logger.info('\tAIF output: Image_1 class name (top-5 classes prob.) \tclass = "%s" ("%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f)',
+                    to_print_0[0][1], to_print_0[0][0], to_print_0[0][2], to_print_0[1][0], to_print_0[1][2],
+                    to_print_0[2][0], to_print_0[2][2], to_print_0[3][0], to_print_0[3][2], to_print_0[4][0], to_print_0[4][2])
+    app.logger.info('\t          : Image_2 class name (top-5 classes prob.) \tclass = "%s" ("%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f, "%03d": %.2f)',
+                    to_print_1[0][1], to_print_1[0][0], to_print_1[0][2], to_print_1[1][0], to_print_1[1][2],
+                    to_print_1[2][0], to_print_1[2][2], to_print_1[3][0], to_print_1[3][2], to_print_1[4][0], to_print_1[4][2])
+    app.logger.info('\t            ...')
     shutil.rmtree(FOLDERNAME, ignore_errors=True)
     # END OF PRINTS ----------------------------------------------
     # Return Dictionary
@@ -208,8 +214,8 @@ app=Flask(__name__)
 
 @app.route('/api/infer',methods=['POST'])
 def test():
-    MODEL_PATH = "ResNet50_ImageNet_70_90_7_76GF_TensorRT_INT8_BATCH_128"
-    BATCH_SIZE = 128
+    MODEL_PATH = "ResNet50_ImageNet_70_90_7_76GF_TensorRT_INT8_BATCH_32"
+    BATCH_SIZE = 32
     r = request
     global initialized
     global warmed_up
@@ -224,13 +230,12 @@ def test():
         app.logger.info("warm_up")
         warm_up(BATCH_SIZE)
         warmed_up=True
-    file = r.files['archive']
-    file_like_object = file.read()
+
     # Call the service here
     print("inference")
     app.logger.info("inference")
 
-    preds = inference(file_like_object, BATCH_SIZE, MODEL_PATH) # This changes from case to case
+    preds = inference(r, BATCH_SIZE, MODEL_PATH) # This changes from case to case
 
     # Return the dicitonary in json form
     return Response(response=json.dumps(preds),status=200,mimetype="application/json")

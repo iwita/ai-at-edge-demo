@@ -13,7 +13,7 @@ RUN rm /etc/apt/sources.list.d/nvidia-ml.list
 RUN apt-get update -y && apt-get install libgl1 -y
 
 COPY rest-cnn.py /home/Documents
-COPY ResNet50_ImageNet_70_90_7_76GF_TensorRT_INT8_BATCH_128 /home/Documents/ResNet50_ImageNet_70_90_7_76GF_TensorRT_INT8_BATCH_128
+COPY ResNet50_ImageNet_70_90_7_76GF_TensorRT_INT8_BATCH_32 /home/Documents/ResNet50_ImageNet_70_90_7_76GF_TensorRT_INT8_BATCH_32
 #COPY client.py /home/Documents
 COPY imagenet_class_index.json /home/Documents/imagenet_class_index.json
 WORKDIR /home/Documents

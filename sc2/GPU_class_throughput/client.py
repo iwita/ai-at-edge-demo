@@ -6,9 +6,9 @@ import time
 import sys
 import json
 import datetime
-IMAGE_ZIP_PATH = './ImageNet_val_folder_128_no_compression_images.zip' # Check the size 
-DATASET_SIZE = 128
-IMAGE_TO_SHOW = 8
+IMAGE_ZIP_PATH = './ImageNet_val_folder_32_no_compression_images.zip' # Check the size 
+DATASET_SIZE = 32
+IMAGE_TO_SHOW = 0
 
 addr = 'http://localhost:3001'
 test_url = addr + '/api/infer'
