@@ -12,7 +12,7 @@ import datetime
 
 IMAGE_PATH = "testing_0.png"
 SEG_IMAGE_PATH = "out.png"
-addr = 'http://192.168.1.228:3000'
+addr = 'http://localhost:3000'
 test_url = addr + '/api/infer'
 
 def show_image(image_path, seg_image_path):

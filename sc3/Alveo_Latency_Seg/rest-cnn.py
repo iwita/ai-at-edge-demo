@@ -45,8 +45,6 @@ CLASS_NAMES = ("Sky",
                "Bicyclist",
                "miscellanea")
 
-logging.basicConfig(level=logging.DEBUG)
-
 # colors for segmented classes
 colorB = [128, 232, 70, 156, 153, 153,  30,   0,  35, 152, 180,  60,   0, 142, 70, 100, 100, 230,  32]
 colorG = [ 64,  35, 70, 102, 153, 153, 170, 220, 142, 251, 130,  20,   0,   0,  0,  60,  80,   0,  11]
@@ -64,13 +62,11 @@ BATCH=1
 # Is the kernel already initialized?
 initialized=False
 
+logging.basicConfig(level=logging.DEBUG)
 # app.logger.basicConfig(level=app.logger.DEBUG) #is this needed for app.logger?
 
 # This variable stores the inferred label(s) of the incoming images
 out_q = None
-
-MODEL = "ResNet50"
-
 divider = '------------------------------------'
 
 def init_kernel(threads,model):
@@ -80,7 +76,6 @@ def init_kernel(threads,model):
     all_dpu_runners = []    # Because we re-initialize, empty the list
     g = xir.Graph.deserialize(model)
     subgraphs = get_child_subgraph_dpu(g)
-    
     #Create the DPU runners
     for i in range(threads):
         try:
@@ -89,66 +84,34 @@ def init_kernel(threads,model):
             print(e)
     et = datetime.now()
     elasped_time_i=et-st
-    app.logger.info('Initialization time: %.2f ms', elasped_time_i.total_seconds()*1000)
-'''
-def inference_local(indata,threads):
-    # input scaling
-    #input_fixpos = all_dpu_runners[0].get_input_tensors()[0].get_attr("fix_point")
-    #input_scale = 2**input_fixpos
-    inputs_scale=5
-    # Load Images from csv (this would be numpy array??)
-    print(divider)
-    # If we want to get multiple images, we should pass them in a python list
-    # Data --> Image . Assume we get the data in numpyarray of image encoded bytes
-    img=cv2.imdecode(indata,cv2.IMREAD_COLOR)
-    out_q = [None] * 1
-    # print('Pre-processing',runTotal,'images...')
-    
-    # Input images
-    image_list = []
-    
+    app.logger.info('Initialize time :\t' + str(int(elapsed_time_i.total_seconds()*1000)) + ' ms')
 
-    # Append pre-processed images to img list
-    # Let's keep it as is for now (to allow for bath processing in our tests)
-    # for i in range(runTotal):
-
-    # We could support batch mode later on
-    runTotal=1
-    # data = cv2.imread(img)
-    print(img)
-    print(type(img))
-    print(img.shape)
-    proc_img = preprocess_image(img, input_scale)
-    print("Processed Image")
-    print(proc_img)
-    print(proc_img.shape)
-    image_list.append(preprocess_image(img, input_scale))
-    print(image_list[0])
-'''
 def inference(indata,threads):
-
+    full_start = time.time()
     global all_dpu_runners
     global out_q
+    print(divider)
+    # REST API INPUT BOILERPLATE --------------------------------
+    # Data --> Image . Assume we get the data in numpyarray of image encoded bytes
+    img=cv2.imdecode(np.fromstring(indata.data,np.uint8),cv2.IMREAD_COLOR)
+    runTotal = 1
+    out_q = [None] * runTotal
+    # END OF REST API INPUT BOILERPLATE -------------------------
+    # 
+    # CREATE AND PREPROCESS DATASET -----------------------------
     # input scaling
     input_fixpos = all_dpu_runners[0].get_input_tensors()[0].get_attr("fix_point")
     input_scale = 2**input_fixpos
-    print(divider)
-    app.logger.info("{:s}".format(divider))
-    
-    # Data --> Image . Assume we get the data in numpyarray of image encoded bytes
-    img=cv2.imdecode(indata,cv2.IMREAD_COLOR)
-    
-    # print(indata)
-    # print(img)
-    runTotal = 1
-    out_q = [None] * runTotal
-    
     # Input images
     image_list = []
-
+    # Preprocess
     for i in range(runTotal):
         image_list.append(preprocess_image(img, input_scale))
+    # END OF CREATE AND PREPROCESS DATASET ----------------------
+    #
+    # EXPERIMENT ------------------------------------------------
     # '''run threads '''
+    app.logger.info("-------------Experiment-------------")
     app.logger.info('Starting {:d} threads...'.format(runTotal))
 
     print(image_list[0])
@@ -156,7 +119,6 @@ def inference(indata,threads):
 
     threadAll = []
     start=0
-    my_time = [None] * threads #Trick to get the time later
     for i in range(threads):
         if (i==threads-1):
             end = len(image_list)
@@ -164,10 +126,9 @@ def inference(indata,threads):
             end = start+(len(image_list)//threads)
         in_q = image_list[start:end]
         #Create the thread
-        t1 = threading.Thread(target=runDPU, args=(i,start,all_dpu_runners[i], in_q, my_time, BATCH))
+        t1 = threading.Thread(target=runDPU, args=(i,start,all_dpu_runners[i], in_q, BATCH))
         threadAll.append(t1)
         start=end
-
     time1 = time.time()
     #Run the Thread
     for x in threadAll:
@@ -175,37 +136,37 @@ def inference(indata,threads):
     for x in threadAll:
         x.join()
     time2 = time.time()
-    timetotal = time2 - time1
-    timetotal_v2 =  max(my_time)
-    app.logger.info("timetotal %4f , time_total_v2 %.4f" %(timetotal, timetotal_v2))
-    # We prefer timetotal, seems more reliable 
-    fps = float(runTotal / timetotal)
-    print(divider)
-    app.logger.info("{:s}".format(divider))
-    print("Throughput=%.2f fps, total frames = %d, time=%.4f seconds" %(fps, runTotal, timetotal))
-    app.logger.info("Throughput=%.2f fps, total frames = %d, time=%.4f seconds" %(fps, runTotal, timetotal))
-    
-
-    print(out_q)
-    # print(out_q.shape)
     y_pred1_i = np.asarray(out_q) # Expected shape is (1, HEIGHT, WIDTH) and each index is the number of the color
-
-    # print(y_pred1_i)
-    # print(y_pred1_i.shape)
+    # END OF EXPERIMENT ------------------------------------------
+    #
+    # BENCHMARKS -------------------------------------------------
+    timetotal_execution = time2 - time1
+    avg_time_execution = timetotal_execution/runTotal
+    #fps = float(runTotal / timetotal)
+    #print(divider)
+    #app.logger.info("{:s}".format(divider))
+    #print("Throughput=%.2f fps, total frames = %d, time=%.4f seconds" %(fps, runTotal, timetotal))
+    #app.logger.info("Throughput=%.2f fps, total frames = %d, time=%.4f seconds" %(fps, runTotal, timetotal))
+    # END OF BENCHMARKS ------------------------------------------
+    #
+    # REST API OUTPUT BOILERPLATE --------------------------------
     segmentated_image = give_color_to_seg_img(y_pred1_i[0], NUM_CLASSES)
-    print("Segmentated Image")
-    print(segmentated_image)
-    print(segmentated_image.shape)
-
     segmentated_image = (segmentated_image*255.0).astype(np.uint8)
-
     _, seg_img_encoded = cv2.imencode('.png', segmentated_image)
-    
+    # END OF REST API OUTPUT BOILERPLATE -------------------------
+    #
+    # PRINTS -----------------------------------------------------
+    full_end = time.time()
+    full_time = full_end - full_start
+    avg_full_time = full_time / runTotal
+    app.logger.info(' ')
+    app.logger.info('\tProcessing Latency (data preparation + execution) :  \t%d ms (%d + %d)', int(avg_full_time*1000), int((avg_full_time - avg_time_execution)*1000), int(avg_time_execution*1000))
+    app.logger.info('\tTotal throughput (batch size) :                      \t%d fps (%d)', int(runTotal/full_time), batch_size)
+    # END OF PRINTS ----------------------------------------------
     # Return encoded image in string
     return seg_img_encoded
-    # return
 
-def runDPU(id,start,dpu,img,my_time,batch):
+def runDPU(id,start,dpu,img,batch):
     '''get tensor'''
     inputTensors = dpu.get_input_tensors()
     outputTensors = dpu.get_output_tensors()
@@ -251,20 +212,16 @@ def runDPU(id,start,dpu,img,my_time,batch):
         '''prepare batch input/output '''
         inputData = []
         inputData = [np.empty(input_ndim, dtype=np.int8, order="C")]
-        time1 = time.time()
         #inputData[0] = img[count:count+runSize]
         imageRun = inputData[0]
         imageRun[0:runSize] = img[count:count+runSize]
         '''run with batch '''
         job_id = dpu.execute_async(inputData,outputData[count])
         dpu.wait(job_id)
-        time2 = time.time()
         for j in range(runSize):
-            out_q[start+count+j] = np.argmax(outputData[count][0][j],2)
-        time_total += time2 - time1
-        count = count + runSize 
-    my_time[id] = time_total
-    app.logger.info("id: {} time: {:.3f}".format(id, time_total))
+            out_q[start+count+j] = np.argmax(outputData[count][0][j],axis=2)
+        count = count + runSize
+    return
 
 def get_child_subgraph_dpu(graph: "Graph") -> List["Subgraph"]:
     assert graph is not None, "'graph' should not be None."
@@ -320,15 +277,11 @@ def test():
         print("init")
         app.logger.info("init")
         initialized=True
-    start = datetime.now()
     # Call the service here
     print("inference")
     app.logger.info("inference")
-    # print(r.data)
-    # print(np.fromstring(r.data,np.uint8))
-    seg_img_string = inference(np.fromstring(r.data,np.uint8), THREADS)
-    end = datetime.now()
-    app.logger.info("Throighput: %s.2f")
+    seg_img_string = inference(r, THREADS)
+    #seg_img_string = inference(np.fromstring(r.data,np.uint8), THREADS)
     # Returns np.array as string. Need to imdecode in client
     return Response(response=seg_img_string.tobytes(),status=200,mimetype="image/png") 
 

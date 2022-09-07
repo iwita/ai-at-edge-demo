@@ -18,7 +18,7 @@ COPY rest-cnn.py /workspace/
 # COPY test_images /workspace/test_images
 COPY customcnn.xmodel /workspace
 COPY setup.sh /workspace
-COPY client.py /workspace
+#COPY client.py /workspace
 
 WORKDIR /workspace
 
@@ -26,8 +26,9 @@ RUN chown -R vitis-ai-user:vitis-ai-group /workspace
 
 # RUN pip3 install -r requirements.txt 
 
-ENV FLASK_APP=rest-cnn-nls.py
+ENV FLASK_APP=rest-cnn.py
 EXPOSE 3002
 
-#CMD source /workspace/setup.sh $DEVICE && /usr/bin/python3 rest-cnn-nls.py
+#CMD source /workspace/setup.sh $DEVICE && /usr/bin/python3 rest-cnn.py
+CMD source /workspace/setup.sh $DEVICE
 CMD sleep infinity
