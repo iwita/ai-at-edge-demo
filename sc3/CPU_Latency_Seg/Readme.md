@@ -1,5 +1,5 @@
-docker run -it --rm --name sc3_gpu --gpus '"device=1"' --network=host aimilefth/ai_at_edge_demo:sc3_gpu
+docker run -it --rm --name sc3_cpu --network=host aimilefth/ai_at_edge_demo:sc3_cpu 
 
 docker exec -ti sc3_gpu bash
 
-port:3001
+port:3000

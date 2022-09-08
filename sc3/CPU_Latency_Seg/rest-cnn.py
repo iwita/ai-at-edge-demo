@@ -18,8 +18,6 @@ import json
 import numpy as np
 from ctypes import *
 from typing import List
-import onnxruntime as ort
-import onnx
 import threading
 import sys
 import argparse
@@ -67,53 +65,46 @@ warmed_up = False
 logging.basicConfig(level=logging.DEBUG) #is this needed for logging?
 
 # This variable is the model
-sess = None
+interpreter = None
 divider = '------------------------------------'
 
-def init_kernel(model_path,batch_size):
+def init_kernel(model_path,batch_size, num_threads):
     st=datetime.now()
-    global sess
-    providers = [
-         ('TensorrtExecutionProvider',{
-          'device_id' : 0,
-          'trt_fp16_enable' : False,
-          'trt_int8_enable' : True,
-          'trt_int8_calibration_table_name' : 'calibration.flatbuffers',
-          'trt_engine_cache_enable' : False
-         }),
-         ('CUDAExecutionProvider', {
-          'device_id' : 0,
-         })
-    ] 
+    global interpreter
     #Load Model
-    sess_opt = ort.SessionOptions()
-    sess_opt.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
-    sess = ort.InferenceSession(path_or_bytes=model_path, sess_options=sess_opt, providers=providers)
+    interpreter = tf.lite.Interpreter(model_path=model_path, num_threads=num_threads)
+    print(interpreter)
+    input_details = interpreter.get_input_details()
+    # Get input details so we can change them and allow Batch size input
+    interpreter.resize_tensor_input(input_details[0]['index'], [batch_size, input_details[0]['shape'][1], input_details[0]['shape'][2], input_details[0]['shape'][3]])
+    # Allocate tensors is VITAL
+    interpreter.allocate_tensors()
     # Useful for Debugging
-    app.logger.info("{}".format(sess.get_providers()))
-    app.logger.info("{}".format(sess.get_provider_options()))
-    app.logger.info("{}".format(sess.get_session_options()))
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    app.logger.info("{}".format(input_details[0]['shape']))
+    app.logger.info("{}".format(input_details[0]['dtype']))
+    app.logger.info("{}".format(output_details[0]['shape']))
+    app.logger.info("{}".format(output_details[0]['dtype']))
     et = datetime.now()
     elapsed_time_i=et-st
     app.logger.info('Initialize time :\t' + str(int(elapsed_time_i.total_seconds()*1000)) + ' ms')
 
 def warm_up(batch_size):
     wm_start = datetime.now()
-    global sess
-    input_name = sess.get_inputs()[0].name
-    x_dummy = np.zeros(shape=(batch_size,224,224,3), dtype=np.float32)
-    #x_dummy = tf.random.normal(shape =(batch_size, 224, 224, 3))
-    #x_input = tf.constant(x_dummy[tf.newaxis,0,:])
-    #output_data = sess.run([],{input_name: x_input.numpy()})[0]
-    output_data = sess.run([],{input_name: x_dummy})[0]
-    #torch.cuda.synchronize()
+    global interpreter
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    x_dummy = np.zeros(shape =(batch_size, 224, 224, 3), dtype=np.float32)
+    interpreter.set_tensor(input_details[0]['index'], x_dummy)
+    interpreter.invoke()
+    output_data = interpreter.get_tensor(output_details[0]['index'])
     wm_end = datetime.now()
     app.logger.info('Warmup time :\t' + str(int((wm_end-wm_start).total_seconds()*1000)) + ' ms')
 
 def inference(indata,batch_size, model_path):
     full_start = time.time()
-    global sess
-    input_name = sess.get_inputs()[0].name
+    global interpreter
     # REST API INPUT BOILERPLATE --------------------------------
     # Data --> Image . Assume we get the data in numpyarray of image encoded bytes
     rest_api_input_start = time.time()
@@ -124,8 +115,13 @@ def inference(indata,batch_size, model_path):
     # END OF REST API INPUT BOILERPLATE -------------------------
     # 
     # CREATE AND PREPROCESS DATASET -----------------------------
+    details_start = time.time()
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    details_end = time.time()
+    print("Get input output details time %d ms" %((details_end - details_start)*1000))
     pre_start = time.time()
-    x_test = preprocess_image(img)
+    x_test = preprocess_image(img, input_details[0])
     pre_end= time.time()
     print("Preprocess time %d ms" %((pre_end - pre_start)*1000))
     # END OF CREATE AND PREPROCESS DATASET ----------------------
@@ -133,16 +129,16 @@ def inference(indata,batch_size, model_path):
     # EXPERIMENT ------------------------------------------------
     app.logger.info("Dataset size: {}".format(runTotal))
     #num_samples = runTotal
-    #x_input = tf.constant(x_test[tf.newaxis,:])
     start =  time.time()
-    output_data = sess.run([],{input_name: x_test[np.newaxis,:]})[0]
-    #output_data = sess.run([],{input_name: x_input.numpy()})[0]
-    #torch.cuda.synchronize()
+    interpreter.set_tensor(input_details[0]['index'], x_test[np.newaxis, :])
+    interpreter.invoke()
+    output_data = interpreter.get_tensor(output_details[0]['index'])
     end = time.time()
     post_start = time.time()
     y_pred1_i = np.argmax(output_data, axis=3) # Expected shape is (1, HEIGHT, WIDTH) and each index is the number of the color??
     post_end = time.time()
     print("Postprocess time %d ms" %((post_end - post_start)*1000))
+    print(y_pred1_i.shape) # Check if (1, HEIGHT, WIDTH) or (HEIGHT, WIDTH)
     # END OF EXPERIMENT ------------------------------------------
     #
     # BENCHMARKS -------------------------------------------------
@@ -157,15 +153,14 @@ def inference(indata,batch_size, model_path):
     color_end = time.time()
     encode_start = time.time()
     segmentated_image = (segmentated_image*255.0).astype(np.uint8)
-    
     _, seg_img_encoded = cv2.imencode('.png', segmentated_image)
     encode_end = time.time()
     print("Color time %d ms" %((color_end - color_start)*1000))
     print("Encode time %d ms" %((encode_end - encode_start)*1000))
-    
     # END OF REST API OUTPUT BOILERPLATE -------------------------
     #
     # PRINTS -----------------------------------------------------
+
     full_end = time.time()
     full_time = full_end - full_start
     avg_full_time = full_time / runTotal
@@ -176,13 +171,15 @@ def inference(indata,batch_size, model_path):
     # Return encoded image in string
     return seg_img_encoded
 
-def preprocess_image(image):
-    #Image normalization
-    #Args:     Image
-    #Returns:  normalized image
-    image= image.astype(np.float32)
+def preprocess_image(image, input_details_0):
+   # Preprocess images
+   # If models are int8, scaling is necessary
+    image = image.astype(np.float32)
     image = image / NORM_FACTOR - 1.0
-    # image = 
+    if(input_details_0['dtype'] == np.uint8):
+        input_scale, input_zero_point = input_details_0["quantization"]
+        image = image / input_scale + input_zero_point
+        image = tf.cast(x=image, dtype=tf.uint8)
     return image
 
 def give_color_to_seg_img(seg,n_classes):
@@ -204,8 +201,13 @@ app=Flask(__name__)
 
 @app.route('/api/infer',methods=['POST'])
 def test():
-    MODEL_PATH = "best_UNET_v3_B1.onnx"
+    MODEL_PATH = "best_UNET_v3.tflite"
     BATCH_SIZE = 1
+    cores = int(os.environ['CORES'])
+    if(cores > 8 and cores < 0):
+        NUM_THREADS = 4
+    else:
+        NUM_THREADS = cores
     r = request
     global initialized
     global warmed_up
@@ -213,7 +215,7 @@ def test():
     if not initialized:
         print("init")
         app.logger.info("init")
-        init_kernel(MODEL_PATH, BATCH_SIZE) # This changes from case to case
+        init_kernel(MODEL_PATH, BATCH_SIZE, NUM_THREADS) # This changes from case to case
         initialized=True
     if not warmed_up:
         print("warm_up")

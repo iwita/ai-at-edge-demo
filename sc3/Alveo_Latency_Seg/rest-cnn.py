@@ -10,7 +10,6 @@ import numpy as np
 import cv2
 from ctypes import *
 from typing import List
-import numpy as np
 import vart
 import pathlib
 import xir
@@ -160,8 +159,8 @@ def inference(indata,threads):
     full_time = full_end - full_start
     avg_full_time = full_time / runTotal
     app.logger.info(' ')
-    app.logger.info('\tProcessing Latency (data preparation + execution) :  \t%d ms (%d + %d)', int(avg_full_time*1000), int((avg_full_time - avg_time_execution)*1000), int(avg_time_execution*1000))
-    app.logger.info('\tTotal throughput (batch size) :                      \t%d fps (%d)', int(runTotal/full_time), batch_size)
+    app.logger.info('\tProcessing Latency (data preparation + execution) :  \t%.2f ms (%.2f + %.2f)', (avg_full_time*1000), ((avg_full_time - avg_time_execution)*1000), int(avg_time_execution*1000))
+    app.logger.info('\tTotal throughput (batch size) :                      \t%.2f fps (%d)', (runTotal/full_time), batch_size)
     # END OF PRINTS ----------------------------------------------
     # Return encoded image in string
     return seg_img_encoded

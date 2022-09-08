@@ -37,8 +37,8 @@ start = datetime.datetime.now()
 # send http request with image and receive response
 response = requests.post(test_url, data=img_encoded.tobytes(), headers=headers)
 end = datetime.datetime.now()
-print("E2E Latency :\t %d ms" % (int((end-start).total_seconds()*1000)))
-print("Throughput  :\t %d fps"  % (int(1.0/((end-start).total_seconds()))))
+print("E2E Latency :\t %.2f ms" % (((end-start).total_seconds()*1000)))
+print("Throughput  :\t %.2f fps"  % ((1.0/((end-start).total_seconds()))))
 # decode response
 seg_img=cv2.imdecode(np.frombuffer(response.content,np.uint8),cv2.IMREAD_COLOR)
 # save image

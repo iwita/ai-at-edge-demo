@@ -8,3 +8,4 @@ Images*
 **/ResNet50_ImageNet_70_90_7_76GF_TensorRT_INT8_BATCH_32/*
 *.onnx
 **/best_UNET_v3_TensorRT_FP16_BATCH_1/*
+*.tflite
