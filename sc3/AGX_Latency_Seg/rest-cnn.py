@@ -170,7 +170,7 @@ def inference(indata,batch_size, model_path):
     full_time = full_end - full_start
     avg_full_time = full_time / runTotal
     app.logger.info(' ')
-    app.logger.info('\tProcessing Latency (data preparation + execution) :  \t%.2f ms (%.2f + %.2f)', (avg_full_time*1000), ((avg_full_time - avg_time_execution)*1000), int(avg_time_execution*1000))
+    app.logger.info('\tProcessing Latency (data preparation + execution) :  \t%.2f ms (%.2f + %.2f)', (avg_full_time*1000), ((avg_full_time - avg_time_execution)*1000), (avg_time_execution*1000))
     app.logger.info('\tTotal throughput (batch size) :                      \t%.2f fps (%d)', (runTotal/full_time), batch_size)
     # END OF PRINTS ----------------------------------------------
     # Return encoded image in string
