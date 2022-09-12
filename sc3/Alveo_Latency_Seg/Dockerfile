@@ -12,13 +12,14 @@ RUN /usr/bin/python3 -m pip install --upgrade tensorflow
 # TOBEREMOVED
 # For the client
 
-RUN /usr/bin/python3 -m pip install opencv-python requests
+RUN /usr/bin/python3 -m pip install opencv-python flask requests
 
-COPY rest-cnn.py /workspace/
+WORKDIR /workspace
+
 # COPY test_images /workspace/test_images
 COPY customcnn.xmodel /workspace
 COPY setup.sh /workspace
-#COPY client.py /workspace
+COPY rest-cnn.py /workspace
 
 WORKDIR /workspace
 
@@ -27,7 +28,7 @@ RUN chown -R vitis-ai-user:vitis-ai-group /workspace
 # RUN pip3 install -r requirements.txt 
 
 ENV FLASK_APP=rest-cnn.py
-EXPOSE 3002
+EXPOSE 3001
 
 #CMD source /workspace/setup.sh $DEVICE && /usr/bin/python3 rest-cnn.py
 CMD source /workspace/setup.sh $DEVICE
