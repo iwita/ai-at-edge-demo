@@ -31,5 +31,8 @@ ENV FLASK_APP=rest-cnn.py
 EXPOSE 3001
 
 #CMD source /workspace/setup.sh $DEVICE && /usr/bin/python3 rest-cnn.py
-CMD source /workspace/setup.sh $DEVICE
-CMD sleep infinity
+#SHELL ["/bin/bash", "-c"]
+#RUN source /workspace/setup.sh $DEVICE
+#RUN chmod u+x setup.sh
+#RUN ./setup.sh $DEVICE
+CMD source /workspace/setup.sh $DEVICE && sleep infinity

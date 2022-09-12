@@ -6,7 +6,8 @@ RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
 RUN mkdir -p /home/Documents
 # That is for some kind of bug found on cv2
 
-COPY testing_0.png /home/Documents
+#COPY testing_0.png /home/Documents
+ADD images /home/Documents/images
 COPY client.py /home/Documents
 WORKDIR /home/Documents
 

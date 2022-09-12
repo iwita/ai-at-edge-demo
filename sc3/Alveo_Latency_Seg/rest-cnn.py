@@ -55,8 +55,6 @@ COLORS = np.array(CLASS_COLOR, dtype="float32")
 
 # Initialize
 all_dpu_runners = []
-THREADS=1
-BATCH=1
 
 # Is the kernel already initialized?
 initialized=False
@@ -82,23 +80,27 @@ def init_kernel(threads,model):
         except Exception as e:
             print(e)
     et = datetime.now()
-    elasped_time_i=et-st
+    elapsed_time_i=et-st
     app.logger.info('Initialize time :\t' + str(int(elapsed_time_i.total_seconds()*1000)) + ' ms')
 
-def inference(indata,threads):
+def inference(indata,threads,batch_size):
     full_start = time.time()
     global all_dpu_runners
     global out_q
     print(divider)
     # REST API INPUT BOILERPLATE --------------------------------
     # Data --> Image . Assume we get the data in numpyarray of image encoded bytes
+    rest_api_input_start = time.time()
     img=cv2.imdecode(np.fromstring(indata.data,np.uint8),cv2.IMREAD_COLOR)
     runTotal = 1
     out_q = [None] * runTotal
+    rest_api_output_end = time.time() 
+    print("Rest API Input %d ms" %((rest_api_output_end - rest_api_input_start)*1000))
     # END OF REST API INPUT BOILERPLATE -------------------------
     # 
     # CREATE AND PREPROCESS DATASET -----------------------------
     # input scaling
+    pre_start = time.time()
     input_fixpos = all_dpu_runners[0].get_input_tensors()[0].get_attr("fix_point")
     input_scale = 2**input_fixpos
     # Input images
@@ -106,52 +108,61 @@ def inference(indata,threads):
     # Preprocess
     for i in range(runTotal):
         image_list.append(preprocess_image(img, input_scale))
+    pre_end= time.time()
+    print("Preprocess time %d ms" %((pre_end - pre_start)*1000))
     # END OF CREATE AND PREPROCESS DATASET ----------------------
     #
     # EXPERIMENT ------------------------------------------------
     # '''run threads '''
+    thread_creation_start = time.time()
     app.logger.info("-------------Experiment-------------")
     app.logger.info('Starting {:d} threads...'.format(runTotal))
-
-    print(image_list[0])
-    print(image_list[0].shape)
-
     threadAll = []
     start=0
-    for i in range(threads):
-        if (i==threads-1):
-            end = len(image_list)
-        else:
-            end = start+(len(image_list)//threads)
-        in_q = image_list[start:end]
-        #Create the thread
-        t1 = threading.Thread(target=runDPU, args=(i,start,all_dpu_runners[i], in_q, BATCH))
-        threadAll.append(t1)
-        start=end
+    #for i in range(threads):
+    #    if (i==threads-1):
+    #        end = len(image_list)
+    #    else:
+    #        end = start+(len(image_list)//threads)
+    #    in_q = image_list[start:end]
+    #    #Create the thread
+    #    t1 = threading.Thread(target=runDPU, args=(i,start,all_dpu_runners[i], in_q, batch_size))
+    #    threadAll.append(t1)
+    #    start=end
+    t1 = threading.Thread(target=runDPU, args=(0, 0, all_dpu_runners[0], image_list, 1))
+    thread_creation_end = time.time()
+    print("Thread creation time %d ms" %((thread_creation_end - thread_creation_start)*1000))
     time1 = time.time()
     #Run the Thread
-    for x in threadAll:
-        x.start()
-    for x in threadAll:
-        x.join()
+    
+    t1.start()
+    t1.join()
+    #for x in threadAll:
+    #    x.start()
+    #for x in threadAll:
+    #    x.join()
     time2 = time.time()
+    post_start = time.time()
     y_pred1_i = np.asarray(out_q) # Expected shape is (1, HEIGHT, WIDTH) and each index is the number of the color
+    post_end = time.time()
+    print("Postprocess time %d ms" %((post_end - post_start)*1000))
     # END OF EXPERIMENT ------------------------------------------
     #
     # BENCHMARKS -------------------------------------------------
     timetotal_execution = time2 - time1
     avg_time_execution = timetotal_execution/runTotal
-    #fps = float(runTotal / timetotal)
-    #print(divider)
-    #app.logger.info("{:s}".format(divider))
-    #print("Throughput=%.2f fps, total frames = %d, time=%.4f seconds" %(fps, runTotal, timetotal))
-    #app.logger.info("Throughput=%.2f fps, total frames = %d, time=%.4f seconds" %(fps, runTotal, timetotal))
     # END OF BENCHMARKS ------------------------------------------
     #
     # REST API OUTPUT BOILERPLATE --------------------------------
+    color_start = time.time()
     segmentated_image = give_color_to_seg_img(y_pred1_i[0], NUM_CLASSES)
+    color_end = time.time()
+    encode_start = time.time()
     segmentated_image = (segmentated_image*255.0).astype(np.uint8)
     _, seg_img_encoded = cv2.imencode('.png', segmentated_image)
+    encode_end = time.time()
+    print("Color time %d ms" %((color_end - color_start)*1000))
+    print("Encode time %d ms" %((encode_end - encode_start)*1000))
     # END OF REST API OUTPUT BOILERPLATE -------------------------
     #
     # PRINTS -----------------------------------------------------
@@ -159,7 +170,7 @@ def inference(indata,threads):
     full_time = full_end - full_start
     avg_full_time = full_time / runTotal
     app.logger.info(' ')
-    app.logger.info('\tProcessing Latency (data preparation + execution) :  \t%.2f ms (%.2f + %.2f)', (avg_full_time*1000), ((avg_full_time - avg_time_execution)*1000), int(avg_time_execution*1000))
+    app.logger.info('\tProcessing Latency (data preparation + execution) :  \t%.2f ms (%.2f + %.2f)', (avg_full_time*1000), ((avg_full_time - avg_time_execution)*1000), (avg_time_execution*1000))
     app.logger.info('\tTotal throughput (batch size) :                      \t%.2f fps (%d)', (runTotal/full_time), batch_size)
     # END OF PRINTS ----------------------------------------------
     # Return encoded image in string
@@ -175,8 +186,6 @@ def runDPU(id,start,dpu,img,batch):
     # we can avoid output scaling if use argmax instead of softmax
     #output_fixpos = outputTensors[0].get_attr("fix_point")
     #output_scale = 1 / (2**output_fixpos)
-    app.logger.info("input_ndim: {}".format(input_ndim))
-    app.logger.info("output_ndim: {}".format(output_ndim))
     #batchSize = input_ndim[0]
     if(batch == 0):
         batchSize = input_ndim[0]  
@@ -190,14 +199,10 @@ def runDPU(id,start,dpu,img,batch):
         batchSize = batch
     else:
         app.logger.info("Unexpected Error")
-    app.logger.info("batchSize %d" %(batchSize))
-    app.logger.info("output_ndim %d" %(output_ndim[0]))
     # print("output_ndim %d" %(output_ndim[0]))
     n_of_images = len(img)
-    app.logger.info("n_of_images %d" %(n_of_images))
     count = 0
     write_index = start
-    app.logger.info("write_index %d" %(start))
     outputData = []
     time_total = 0.0
     for i in range(n_of_images):
@@ -247,9 +252,6 @@ def preprocess_image(image, fix_scale):
     # image = 
     return image
 
-def denormalize_image(image):
-    return (image+1.0)*NORM_FACTOR/255.0
-
 def give_color_to_seg_img(seg,n_classes):
     if len(seg.shape)==3:
         seg = seg[:,:,0]
@@ -268,18 +270,21 @@ app=Flask(__name__)
 
 @app.route('/api/infer',methods=['POST'])
 def test():
+    MODEL_PATH = 'customcnn.xmodel'
+    THREADS=1
+    BATCH=1
     r = request
     global initialized
     # Check if this is the first run
     if not initialized:
-        init_kernel(THREADS,'customcnn.xmodel')
+        init_kernel(THREADS,MODEL_PATH)
         print("init")
         app.logger.info("init")
         initialized=True
     # Call the service here
     print("inference")
     app.logger.info("inference")
-    seg_img_string = inference(r, THREADS)
+    seg_img_string = inference(r, THREADS,BATCH)
     #seg_img_string = inference(np.fromstring(r.data,np.uint8), THREADS)
     # Returns np.array as string. Need to imdecode in client
     return Response(response=seg_img_string.tobytes(),status=200,mimetype="image/png") 
