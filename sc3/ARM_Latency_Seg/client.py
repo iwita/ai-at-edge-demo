@@ -58,7 +58,7 @@ def main():
     # Construct the argument parser and parse the arguments
     ap = argparse.ArgumentParser()
     ap.add_argument('-i', '--image_path',  type=str, default="testing_0.png", help='Path of image to segmentate. Default is images/valid_0')
-    ap.add_argument('-a', '--address',  type=str, default='http://localhost:3000', help='Address to connect to. Default is http://localhost:3000)
+    ap.add_argument('-a', '--address',  type=str, default='http://localhost:3000', help='Address to connect to. Default is http://localhost:3000')
 
     args = ap.parse_args()
 
