@@ -1,0 +1,27 @@
+INFO:root: Command line options:
+INFO:root:--image_path       : testing_0.png
+INFO:root:--num_of_runs      : 10000
+INFO:root:init
+INFO:root:['serving_default']
+INFO:root:{'conv2d_19': TensorSpec(shape=(None, 224, 224, 12), dtype=tf.float32, name='conv2d_19')}
+INFO:root:ConcreteFunction signature_wrapper(*, input_1)
+  Args:
+    input_1: float32 Tensor, shape=(None, 224, 224, 3)
+  Returns:
+    {'conv2d_19': <1>}
+      <1>: float32 Tensor, shape=(None, 224, 224, 12)
+INFO:root:Initialize time :	18795 ms
+INFO:root:warm_up
+INFO:root:Warmup time :	42966 ms
+INFO:root:inference
+INFO:root:Rest API Input 17 ms
+INFO:root:Preprocess time 1 ms
+INFO:root:Dataset size: 1
+INFO:root:Num of Runs size: 10000
+INFO:root:Postprocess time 8 ms
+INFO:root:Color time 7 ms
+INFO:root:Encode time 4 ms
+INFO:root: 
+INFO:root:	Processing Latency (data preparation + execution) :  	50534.45 ms (40.35 + 50494.10)
+INFO:root:	Total throughput (batch size) :                      	0.02 fps (1)
+INFO:root:Num_of_queries 23443, Avg Power 192.23 W, Total Energy 9706.41 J

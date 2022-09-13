@@ -1,0 +1,12 @@
+INFO:root: Command line options:
+INFO:root:--image_path       : testing_0.png
+INFO:root:--num_of_runs      : 1000
+INFO:root:Initialize time :	1249 ms
+INFO:root:init
+INFO:root:inference
+INFO:root:-------------Experiment-------------
+INFO:root:Starting 1 threads...
+INFO:root: 
+INFO:root:	Processing Latency (data preparation + execution) :  	40970.09 ms (17.84 + 40952.24)
+INFO:root:	Total throughput (batch size) :                      	0.02 fps (1)
+INFO:root:Num_of_queries 106, Avg Power 55.00 W, Total Energy 2252.26 J

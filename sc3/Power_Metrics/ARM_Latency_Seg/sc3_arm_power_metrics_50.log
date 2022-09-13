@@ -1,0 +1,17 @@
+INFO:root: Command line options:
+INFO:root:--image_path       : testing_0.png
+INFO:root:--num_of_runs      : 50
+INFO:root:init
+INFO:root:[  1 224 224   3]
+INFO:root:<class 'numpy.uint8'>
+INFO:root:[  1 224 224  12]
+INFO:root:<class 'numpy.uint8'>
+INFO:root:Initialize time :	29 ms
+INFO:root:warm_up
+INFO:root:Warmup time :	2053 ms
+INFO:root:inference
+INFO:root:Dataset size: 1
+INFO:root: 
+INFO:root:	Processing Latency (data preparation + execution) :  	106274.73 ms (42.11 + 106232.62)
+INFO:root:	Total throughput (batch size) :                      	0.01 fps (1)
+INFO:root:Num_of_queries 47, Avg Power 7.45 W, Total Energy 791.71 J

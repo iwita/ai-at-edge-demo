@@ -1,0 +1,16 @@
+INFO:root: Command line options:
+INFO:root:--image_path       : testing_0.png
+INFO:root:--num_of_runs      : 10000
+INFO:root:init
+INFO:root:['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider']
+INFO:root:{'CPUExecutionProvider': {}, 'TensorrtExecutionProvider': {'trt_engine_cache_enable': '0', 'trt_dump_subgraphs': '0', 'trt_force_sequential_engine_build': '0', 'trt_engine_decryption_enable': '0', 'trt_dla_core': '0', 'trt_engine_cache_path': '', 'trt_dla_enable': '0', 'trt_engine_decryption_lib_path': '', 'trt_int8_use_native_calibration_table': '0', 'trt_int8_calibration_table_name': 'calibration.flatbuffers', 'trt_fp16_enable': '0', 'trt_max_workspace_size': '1073741824', 'trt_min_subgraph_size': '1', 'trt_int8_enable': '1', 'trt_max_partition_iterations': '1000', 'device_id': '0'}, 'CUDAExecutionProvider': {'enable_cuda_graph': '0', 'do_copy_in_default_stream': '1', 'arena_extend_strategy': 'kNextPowerOfTwo', 'gpu_external_empty_cache': '0', 'gpu_external_free': '0', 'cudnn_conv_use_max_workspace': '0', 'gpu_mem_limit': '18446744073709551615', 'cudnn_conv_algo_search': 'EXHAUSTIVE', 'gpu_external_alloc': '0', 'device_id': '0'}}
+INFO:root:<onnxruntime.capi.onnxruntime_pybind11_state.SessionOptions object at 0x7f48f36180>
+INFO:root:Initialize time :	150910 ms
+INFO:root:warm_up
+INFO:root:Warmup time :	31 ms
+INFO:root:inference
+INFO:root:Dataset size: 1
+INFO:root: 
+INFO:root:	Processing Latency (data preparation + execution) :  	174555.38 ms (35.01 + 174520.37)
+INFO:root:	Total throughput (batch size) :                      	0.01 fps (1)
+INFO:root:Num_of_queries 77, Avg Power 11.05 W, Total Energy 1928.26 J
